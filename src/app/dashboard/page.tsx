@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { User, ClosetItem, Outfit } from '@/types'
-import { Shirt, Camera, Calendar, MapPin, Sun, LogOut } from 'lucide-react'
+import { Shirt, Camera, Calendar, LogOut, User as UserIcon, History, Heart } from 'lucide-react'
+import WeatherDisplay from '@/components/WeatherDisplay'
 
 export default function DashboardPage() {
   const [user, setUser] = useState<User | null>(null)
@@ -69,6 +70,7 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Header */}
       <div className="bg-white shadow-sm sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
@@ -76,13 +78,28 @@ export default function DashboardPage() {
               styled.ai
             </h1>
             <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2 text-sm text-gray-600">
-                <MapPin className="w-4 h-4" />
-                <span>{user?.home_city || 'Miami'}</span>
-                <Sun className="w-4 h-4 ml-2" />
-                <span>78°F</span>
-              </div>
-              <button onClick={handleLogout} className="p-2 hover:bg-gray-100 rounded-full">
+              {/* Weather Display */}
+              <WeatherDisplay 
+                city={user?.home_city || 'Miami'}
+                compact={true}
+                showRefresh={true}
+              />
+              
+              {/* Profile Button */}
+              <button 
+                onClick={() => router.push('/profile')}
+                className="p-2 hover:bg-gray-100 rounded-full"
+                title="Profile & Settings"
+              >
+                <UserIcon className="w-5 h-5" />
+              </button>
+              
+              {/* Logout Button */}
+              <button 
+                onClick={handleLogout} 
+                className="p-2 hover:bg-gray-100 rounded-full"
+                title="Logout"
+              >
                 <LogOut className="w-5 h-5" />
               </button>
             </div>
@@ -91,7 +108,9 @@ export default function DashboardPage() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="grid md:grid-cols-3 gap-4 mb-8">
+        {/* Quick Action Cards */}
+        <div className="grid md:grid-cols-4 gap-4 mb-8">
+          {/* Generate Outfit */}
           <button
             onClick={() => router.push('/outfits/generate')}
             className="bg-gradient-to-r from-rose-500 to-teal-500 text-white p-6 rounded-xl shadow-lg hover:opacity-90 transition text-left"
@@ -101,6 +120,7 @@ export default function DashboardPage() {
             <p className="text-sm opacity-90">AI-styled for any occasion</p>
           </button>
           
+          {/* My Closet */}
           <button
             onClick={() => router.push('/closet')}
             className="bg-white p-6 rounded-xl shadow hover:shadow-md transition text-left"
@@ -110,15 +130,40 @@ export default function DashboardPage() {
             <p className="text-sm text-gray-600">{closetItems.length} items</p>
           </button>
 
-          <div className="bg-white p-6 rounded-xl shadow text-left">
+          {/* Outfit History - NEW */}
+          <button
+            onClick={() => router.push('/outfits/history')}
+            className="bg-white p-6 rounded-xl shadow hover:shadow-md transition text-left"
+          >
+            <History className="w-8 h-8 mb-2 text-gray-700" />
+            <h3 className="font-semibold text-lg text-gray-800">Outfit History</h3>
+            <p className="text-sm text-gray-600">
+              {outfits.length} outfits • {outfits.filter(o => o.is_favorite).length} favorites
+            </p>
+          </button>
+
+          {/* Calendar - Coming Soon */}
+          <div className="bg-white p-6 rounded-xl shadow text-left opacity-60">
             <Calendar className="w-8 h-8 mb-2 text-gray-700" />
             <h3 className="font-semibold text-lg text-gray-800">Calendar Styling</h3>
             <p className="text-sm text-gray-600">Coming in V2</p>
           </div>
         </div>
 
+        {/* Recent Outfits Section */}
         <div>
-          <h2 className="text-2xl font-bold text-gray-800 mb-6">Your Outfits</h2>
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-gray-800">Recent Outfits</h2>
+            {outfits.length > 0 && (
+              <button
+                onClick={() => router.push('/outfits/history')}
+                className="text-sm text-rose-500 hover:text-rose-600 font-medium"
+              >
+                View All →
+              </button>
+            )}
+          </div>
+
           {outfits.length === 0 ? (
             <div className="text-center py-12 bg-white rounded-xl">
               <Shirt className="w-16 h-16 text-gray-300 mx-auto mb-4" />
@@ -132,7 +177,7 @@ export default function DashboardPage() {
             </div>
           ) : (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {outfits.map((outfit) => {
+              {outfits.slice(0, 6).map((outfit) => {
                 const outfitItems = closetItems.filter(item => 
                   outfit.outfit_data.closet_item_ids?.includes(item.id)
                 )
@@ -140,7 +185,14 @@ export default function DashboardPage() {
 
                 return (
                   <div key={outfit.id} className="bg-white rounded-xl shadow-lg overflow-hidden">
-                    <div className="p-4 bg-gray-50">
+                    {/* Favorite Badge */}
+                    {outfit.is_favorite && (
+                      <div className="absolute top-2 right-2 z-10">
+                        <Heart className="w-5 h-5 fill-red-500 text-red-500" />
+                      </div>
+                    )}
+                    
+                    <div className="p-4 bg-gray-50 relative">
                       {outfitItems.length > 0 && (
                         <div>
                           <p className="text-xs font-semibold text-gray-600 mb-2">From Your Closet:</p>

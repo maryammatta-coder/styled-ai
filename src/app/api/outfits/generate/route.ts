@@ -1,198 +1,338 @@
-import { NextRequest, NextResponse } from 'next/server'
-import OpenAI from 'openai'
+import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
+import OpenAI from 'openai';
+import { generateWeatherRationale, getWeatherClothingSuggestions, WeatherData } from '@/lib/weather';
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
-})
+});
+
+interface ClosetItem {
+  id: string;
+  name: string;
+  category: string;
+  color: string;
+  season: string[];
+  vibe: string[];
+  fit: string;
+  image_url: string;
+}
+
+interface NewItemSuggestion {
+  description: string;
+  category: string;
+  color: string;
+  reasoning: string;
+  estimated_price?: string;
+  search_terms?: string;
+}
+
+interface OutfitResponse {
+  closet_item_ids: string[];
+  new_items: NewItemSuggestion[];
+  weather_rationale: string;
+  style_rationale: string;
+  outfit_name: string;
+  styling_tips: string[];
+}
+
+// Fetch weather data
+async function fetchWeather(city?: string, useAutoLocation?: boolean): Promise<WeatherData | null> {
+  try {
+    let url = `${process.env.NEXT_PUBLIC_APP_URL}/api/weather`;
+    
+    if (city) {
+      url += `?city=${encodeURIComponent(city)}`;
+    }
+    
+    const response = await fetch(url);
+    const data = await response.json();
+    
+    if (data.success && data.weather) {
+      return data.weather;
+    }
+    return null;
+  } catch (error) {
+    console.error('Failed to fetch weather:', error);
+    return null;
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
-    const { occasion, itemSource } = await request.json()
+    const body = await request.json();
+    const { occasion, itemSource, userId } = body;
 
-    const { createClient } = await import('@supabase/supabase-js')
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    )
+    if (!userId) {
+      return NextResponse.json(
+        { success: false, error: 'User ID required' },
+        { status: 400 }
+      );
+    }
 
-    // Get closet items
-    const { data: items } = await supabase
-      .from('closet_items')
-      .select('*')
-      .eq('is_archived', false)
-      .limit(50)
-
-    // Get user profile
-    const { data: users } = await supabase
+    // Fetch user profile
+    const { data: user, error: userError } = await supabase
       .from('users')
       .select('*')
-      .limit(1)
+      .eq('id', userId)
+      .single();
 
-    const userProfile = users?.[0]
-
-    let prompt = ''
-    let closetDescription = ''
-
-    if (itemSource === 'closet') {
-      // Closet only mode
-      if (!items || items.length === 0) {
-        return NextResponse.json(
-          { error: 'No items in closet. Please add some clothes first!' },
-          { status: 400 }
-        )
-      }
-
-      closetDescription = items.map(item => 
-        `- ${item.name} (${item.category}, ${item.color}, vibes: ${item.vibe.join(', ')})`
-      ).join('\n')
-
-      prompt = `You are a professional stylist. Create an outfit for: ${occasion}
-
-User's Style: ${userProfile?.style_vibe?.join(', ') || 'casual, elevated basics'}
-Favorite Colors: ${userProfile?.color_palette?.join(', ') || 'neutral tones'}
-
-Available Closet Items:
-${closetDescription}
-
-Create a complete outfit using ONLY items from the closet above. Return ONLY valid JSON:
-{
-  "label": "Creative outfit name",
-  "items": ["item name 1", "item name 2", "item name 3"],
-  "weather_rationale": "Why this works for the weather (78°F, Sunny)",
-  "style_rationale": "Why this matches the user's style and occasion"
-}`
-
-    } else if (itemSource === 'mix') {
-      // Mix mode - use some closet items and suggest new ones
-      closetDescription = items && items.length > 0 
-        ? items.map(item => `- ${item.name} (${item.category}, ${item.color})`).join('\n')
-        : 'No items in closet yet'
-
-      prompt = `You are a professional stylist. Create an outfit for: ${occasion}
-
-User's Style: ${userProfile?.style_vibe?.join(', ') || 'casual, elevated basics'}
-Budget: ${userProfile?.budget_level || '$$'}
-
-${items && items.length > 0 ? `Closet Items Available:\n${closetDescription}` : 'User has an empty closet.'}
-
-Create an outfit that ${items && items.length > 0 ? 'MIXES items from their closet with NEW item suggestions' : 'suggests ALL NEW items'}. Return ONLY valid JSON:
-{
-  "label": "Creative outfit name",
-  "closet_items": ["closet item names to use"],
-  "new_items": [
-    {"description": "White sneakers", "category": "shoes", "reasoning": "why this completes the look"},
-    {"description": "Gold hoop earrings", "category": "accessory", "reasoning": "adds polish"}
-  ],
-  "weather_rationale": "Why this works for 78°F, Sunny",
-  "style_rationale": "Why this matches the user's style"
-}`
-
-    } else {
-      // New items only mode
-      prompt = `You are a professional stylist. Create a complete outfit for: ${occasion}
-
-User's Style: ${userProfile?.style_vibe?.join(', ') || 'casual, elevated basics'}
-Favorite Colors: ${userProfile?.color_palette?.join(', ') || 'neutral tones'}
-Budget: ${userProfile?.budget_level || '$$'}
-
-Create a COMPLETE outfit with ALL NEW items to purchase. Return ONLY valid JSON:
-{
-  "label": "Creative outfit name",
-  "new_items": [
-    {"description": "Black wide-leg trousers", "category": "bottom", "reasoning": "elegant base piece"},
-    {"description": "Silk blouse in cream", "category": "top", "reasoning": "sophisticated and timeless"},
-    {"description": "Leather loafers", "category": "shoes", "reasoning": "comfortable and chic"}
-  ],
-  "weather_rationale": "Why this works for 78°F, Sunny",
-  "style_rationale": "Why this matches the user's style and budget"
-}`
+    if (userError || !user) {
+      return NextResponse.json(
+        { success: false, error: 'User not found' },
+        { status: 404 }
+      );
     }
 
-    console.log('Generating outfit - Mode:', itemSource, 'Occasion:', occasion)
+    // Fetch real weather data
+    let weather: WeatherData | null = null;
+    
+    if (user.use_auto_location) {
+      // For auto-location, we'd need client-side coords
+      // Fall back to home_city if available
+      if (user.home_city) {
+        weather = await fetchWeather(user.home_city);
+      }
+    } else if (user.home_city) {
+      weather = await fetchWeather(user.home_city);
+    }
 
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+    // Fallback weather if none available
+    if (!weather) {
+      weather = {
+        temperature: 72,
+        feelsLike: 72,
+        condition: 'Clear',
+        description: 'clear sky',
+        humidity: 50,
+        windSpeed: 5,
+        icon: '01d',
+        city: user.home_city || 'Unknown',
+        country: user.home_country || 'US',
+      };
+    }
+
+    // Generate weather-based clothing suggestions
+    const weatherSuggestions = getWeatherClothingSuggestions(weather);
+    const weatherRationale = generateWeatherRationale(weather);
+
+    // Fetch closet items if needed
+    let closetItems: ClosetItem[] = [];
+    
+    if (itemSource === 'closet' || itemSource === 'mix') {
+      const { data: items, error: itemsError } = await supabase
+        .from('closet_items')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('is_archived', false);
+
+      if (itemsError) {
+        console.error('Error fetching closet items:', itemsError);
+      } else {
+        closetItems = items || [];
+      }
+    }
+
+    // Build the AI prompt
+    const prompt = buildOutfitPrompt({
+      occasion,
+      itemSource,
+      weather,
+      weatherSuggestions,
+      closetItems,
+      userPreferences: {
+        styleVibes: user.style_vibe || [],
+        colorPalette: user.color_palette || [],
+        avoidColors: user.avoid_colors || [],
+        budgetLevel: user.budget_level || '$$',
+      },
+    });
+
+    // Generate outfit using AI
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
       messages: [
         {
-          role: "system",
-          content: "You are a professional fashion stylist. Always respond with valid JSON only, no markdown."
+          role: 'system',
+          content: `You are a professional fashion stylist. Generate outfit recommendations in JSON format only. Be specific about items and include practical styling advice. Always respond with valid JSON matching the requested schema.`,
         },
         {
-          role: "user",
-          content: prompt
-        }
+          role: 'user',
+          content: prompt,
+        },
       ],
-      temperature: 0.8,
-      max_tokens: 600
-    })
+      response_format: { type: 'json_object' },
+      temperature: 0.7,
+    });
 
-    const content = response.choices[0].message.content
-    if (!content) throw new Error('No response from AI')
+    const responseText = completion.choices[0]?.message?.content || '{}';
+    let outfitData: OutfitResponse;
 
-    console.log('AI Response:', content)
-
-    const outfitData = JSON.parse(content.trim())
-
-    // Build outfit data based on mode
-    let selectedItemIds: string[] = []
-    let newItems = []
-
-    if (itemSource === 'closet') {
-      selectedItemIds = items
-        ?.filter(item => 
-          outfitData.items?.some((name: string) => 
-            item.name.toLowerCase().includes(name.toLowerCase()) ||
-            name.toLowerCase().includes(item.name.toLowerCase())
-          )
-        )
-        .map(item => item.id) || []
-    } else if (itemSource === 'mix') {
-      selectedItemIds = items
-        ?.filter(item => 
-          outfitData.closet_items?.some((name: string) => 
-            item.name.toLowerCase().includes(name.toLowerCase()) ||
-            name.toLowerCase().includes(item.name.toLowerCase())
-          )
-        )
-        .map(item => item.id) || []
-      newItems = outfitData.new_items || []
-    } else {
-      newItems = outfitData.new_items || []
+    try {
+      outfitData = JSON.parse(responseText);
+    } catch (parseError) {
+      console.error('Failed to parse AI response:', parseError);
+      return NextResponse.json(
+        { success: false, error: 'Failed to generate outfit' },
+        { status: 500 }
+      );
     }
 
-    console.log('Selected item IDs:', selectedItemIds)
-    console.log('New items:', newItems)
+    // Add weather rationale if not provided by AI
+    if (!outfitData.weather_rationale) {
+      outfitData.weather_rationale = weatherRationale;
+    }
 
-    // Save outfit
-    const userId = items?.[0]?.user_id || users?.[0]?.id
-    
-    const { data: outfit, error: outfitError } = await supabase
+    // Save outfit to database
+    const { data: savedOutfit, error: saveError } = await supabase
       .from('outfits')
-      .insert([{
+      .insert({
         user_id: userId,
-        label: outfitData.label,
-        context_type: 'manual_request',
+        label: outfitData.outfit_name || `${occasion} Outfit`,
+        context_type: occasion,
         date: new Date().toISOString().split('T')[0],
         outfit_data: {
-          closet_item_ids: selectedItemIds,
-          new_items: newItems,
+          closet_item_ids: outfitData.closet_item_ids || [],
+          new_items: outfitData.new_items || [],
           weather_rationale: outfitData.weather_rationale,
-          style_rationale: outfitData.style_rationale
-        }
-      }])
+          style_rationale: outfitData.style_rationale,
+          styling_tips: outfitData.styling_tips || [],
+          weather: {
+            temperature: weather.temperature,
+            condition: weather.condition,
+            city: weather.city,
+          },
+        },
+      })
       .select()
-      .single()
+      .single();
 
-    if (outfitError) throw outfitError
+    if (saveError) {
+      console.error('Error saving outfit:', saveError);
+    }
 
-    console.log('Outfit saved successfully')
+    // Fetch full closet item details for response
+    let outfitClosetItems: ClosetItem[] = [];
+    if (outfitData.closet_item_ids && outfitData.closet_item_ids.length > 0) {
+      const { data: fetchedItems } = await supabase
+        .from('closet_items')
+        .select('*')
+        .in('id', outfitData.closet_item_ids);
+      
+      outfitClosetItems = fetchedItems || [];
+    }
 
-    return NextResponse.json({ success: true, outfit })
-  } catch (error: any) {
-    console.error('Outfit generation error:', error)
+    return NextResponse.json({
+      success: true,
+      outfit: {
+        id: savedOutfit?.id,
+        label: outfitData.outfit_name || `${occasion} Outfit`,
+        outfit_data: {
+          closet_items: outfitClosetItems,
+          closet_item_ids: outfitData.closet_item_ids || [],
+          new_items: outfitData.new_items || [],
+          weather_rationale: outfitData.weather_rationale,
+          style_rationale: outfitData.style_rationale,
+          styling_tips: outfitData.styling_tips || [],
+        },
+        weather: {
+          temperature: weather.temperature,
+          condition: weather.condition,
+          city: weather.city,
+        },
+      },
+    });
+  } catch (error) {
+    console.error('Outfit generation error:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to generate outfit' },
+      { success: false, error: 'Failed to generate outfit' },
       { status: 500 }
-    )
+    );
   }
+}
+
+interface PromptParams {
+  occasion: string;
+  itemSource: 'closet' | 'mix' | 'new';
+  weather: WeatherData;
+  weatherSuggestions: ReturnType<typeof getWeatherClothingSuggestions>;
+  closetItems: ClosetItem[];
+  userPreferences: {
+    styleVibes: string[];
+    colorPalette: string[];
+    avoidColors: string[];
+    budgetLevel: string;
+  };
+}
+
+function buildOutfitPrompt(params: PromptParams): string {
+  const { occasion, itemSource, weather, weatherSuggestions, closetItems, userPreferences } = params;
+
+  let closetContext = '';
+  if (closetItems.length > 0) {
+    closetContext = `
+AVAILABLE CLOSET ITEMS:
+${closetItems.map((item, idx) => `${idx + 1}. ID: "${item.id}" - ${item.name} (${item.category}, ${item.color}, fits: ${item.fit}, vibes: ${item.vibe?.join(', ')})`).join('\n')}
+`;
+  }
+
+  const sourceInstructions = {
+    closet: 'Use ONLY items from the user\'s closet. Select 3-5 items that work together.',
+    mix: 'Combine closet items with 1-2 new item suggestions. Use at least 2 closet items.',
+    new: 'Suggest a complete outfit with all new items to purchase. Include 3-5 items.',
+  };
+
+  return `
+Create an outfit for: ${occasion}
+
+WEATHER CONDITIONS:
+- Location: ${weather.city}
+- Temperature: ${weather.temperature}°F (feels like ${weather.feelsLike}°F)
+- Conditions: ${weather.condition} - ${weather.description}
+- Humidity: ${weather.humidity}%
+- Wind: ${weather.windSpeed} mph
+
+WEATHER-BASED CLOTHING GUIDANCE:
+- Recommended layers: ${weatherSuggestions.layers}
+- Suggested fabrics: ${weatherSuggestions.fabricSuggestions.join(', ')}
+- Items to avoid: ${weatherSuggestions.avoidItems.join(', ')}
+- Accessories to consider: ${weatherSuggestions.accessories.join(', ')}
+
+USER STYLE PREFERENCES:
+- Style vibes: ${userPreferences.styleVibes.join(', ') || 'Not specified'}
+- Favorite colors: ${userPreferences.colorPalette.join(', ') || 'Not specified'}
+- Colors to avoid: ${userPreferences.avoidColors.join(', ') || 'None'}
+- Budget level: ${userPreferences.budgetLevel}
+
+${closetContext}
+
+TASK: ${sourceInstructions[itemSource]}
+
+Respond with a JSON object in this exact format:
+{
+  "outfit_name": "Creative name for this outfit",
+  "closet_item_ids": ["id1", "id2"],
+  "new_items": [
+    {
+      "description": "Detailed item description",
+      "category": "top/bottom/shoes/accessory/outerwear",
+      "color": "color name",
+      "reasoning": "Why this item works for the outfit",
+      "estimated_price": "$XX-$XX based on budget level",
+      "search_terms": "keywords for shopping"
+    }
+  ],
+  "weather_rationale": "Explanation of how outfit suits the weather",
+  "style_rationale": "How outfit matches user's style preferences",
+  "styling_tips": ["Tip 1", "Tip 2", "Tip 3"]
+}
+
+${itemSource === 'closet' ? 'IMPORTANT: closet_item_ids must contain valid IDs from the closet items list. new_items should be an empty array.' : ''}
+${itemSource === 'new' ? 'IMPORTANT: closet_item_ids should be an empty array. Suggest 3-5 new items.' : ''}
+`;
 }

@@ -50,15 +50,25 @@ export interface Outfit {
   context_id?: string
   date?: string
   created_at: string
+  is_favorite?: boolean
   outfit_data: {
     closet_item_ids: string[]
     new_items?: Array<{
       description: string
       category: string
+      color?: string
       reasoning: string
+      estimated_price?: string
+      search_terms?: string
     }>
     weather_rationale: string
     style_rationale: string
+    styling_tips?: string[]
+    weather?: {
+      temperature: number
+      condition: string
+      city: string
+    }
     variations?: string[]
   }
 }
