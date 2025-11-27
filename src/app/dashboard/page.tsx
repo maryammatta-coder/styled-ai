@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { User, ClosetItem, Outfit } from '@/types'
-import { Shirt, Camera, Calendar, LogOut, User as UserIcon, History, Heart } from 'lucide-react'
+import { Shirt, Camera, Calendar, LogOut, User as UserIcon, History, Heart, Luggage } from 'lucide-react'
 import WeatherDisplay from '@/components/WeatherDisplay'
 
 export default function DashboardPage() {
@@ -109,7 +109,7 @@ export default function DashboardPage() {
 
       <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Quick Action Cards */}
-        <div className="grid md:grid-cols-4 gap-4 mb-8">
+        <div className="grid md:grid-cols-5 gap-4 mb-8">
           {/* Generate Outfit */}
           <button
             onClick={() => router.push('/outfits/generate')}
@@ -142,12 +142,25 @@ export default function DashboardPage() {
             </p>
           </button>
 
-          {/* Calendar - Coming Soon */}
-          <div className="bg-white p-6 rounded-xl shadow text-left opacity-60">
+          {/* Calendar */}
+          <button
+            onClick={() => router.push('/calendar')}
+            className="bg-white p-6 rounded-xl shadow hover:shadow-md transition text-left"
+          >
             <Calendar className="w-8 h-8 mb-2 text-gray-700" />
             <h3 className="font-semibold text-lg text-gray-800">Calendar Styling</h3>
-            <p className="text-sm text-gray-600">Coming in V2</p>
-          </div>
+            <p className="text-sm text-gray-600">Outfits for events</p>
+          </button>
+
+          {/* Packing List */}
+          <button
+            onClick={() => router.push('/packing')}
+            className="bg-white p-6 rounded-xl shadow hover:shadow-md transition text-left"
+          >
+            <Luggage className="w-8 h-8 mb-2 text-gray-700" />
+            <h3 className="font-semibold text-lg text-gray-800">Packing List</h3>
+            <p className="text-sm text-gray-600">Plan for your trip</p>
+          </button>
         </div>
 
         {/* Recent Outfits Section */}
