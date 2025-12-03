@@ -75,7 +75,6 @@ export default function ClosetPage() {
     fit: '',
     season: [] as string[],
     vibe: [] as string[],
-    material: '',
   })
 
   useEffect(() => {
@@ -330,7 +329,6 @@ export default function ClosetPage() {
           fit: editForm.fit,
           season: editForm.season,
           vibe: editForm.vibe,
-          material: editForm.material || null,
           updated_at: new Date().toISOString(),
         })
         .eq('id', editingItem.id)
@@ -1175,17 +1173,6 @@ export default function ClosetPage() {
                       onChange={(e) => setEditForm({ ...editForm, color: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent"
                       placeholder="e.g., Navy Blue"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Material (optional)</label>
-                    <input
-                      type="text"
-                      value={editForm.material}
-                      onChange={(e) => setEditForm({ ...editForm, material: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent"
-                      placeholder="e.g., Cotton, Denim, Leather, Silk"
                     />
                   </div>
 
