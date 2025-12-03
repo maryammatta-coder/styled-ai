@@ -212,7 +212,6 @@ export default function ClosetPage() {
       fit: item.fit || '',
       season: item.season || [],
       vibe: item.vibe || [],
-      material: item.material || '',
     })
   }
 
