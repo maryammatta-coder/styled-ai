@@ -52,6 +52,55 @@ export default function GenerateOutfitPage() {
         return
       }
 
+      // Fetch user data to get location
+      const { data: userData } = await supabase
+        .from('users')
+        .select('home_city')
+        .eq('id', user.id)
+        .single()
+
+      // Fetch current weather
+      let weatherData = null
+      try {
+        // Try to get weather by geolocation first
+        const getWeatherByLocation = async () => {
+          return new Promise((resolve) => {
+            if (!navigator.geolocation) {
+              resolve(null)
+              return
+            }
+            navigator.geolocation.getCurrentPosition(
+              async (position) => {
+                try {
+                  const response = await fetch(
+                    `/api/weather?lat=${position.coords.latitude}&lon=${position.coords.longitude}`
+                  )
+                  const data = await response.json()
+                  resolve(data.success ? data.weather : null)
+                } catch {
+                  resolve(null)
+                }
+              },
+              () => resolve(null),
+              { timeout: 5000 }
+            )
+          })
+        }
+
+        weatherData = await getWeatherByLocation()
+
+        // Fall back to home_city if geolocation fails
+        if (!weatherData && userData?.home_city) {
+          const response = await fetch(`/api/weather?city=${encodeURIComponent(userData.home_city)}`)
+          const data = await response.json()
+          if (data.success) {
+            weatherData = data.weather
+          }
+        }
+      } catch (err) {
+        console.error('Weather fetch error:', err)
+      }
+
       const response = await fetch('/api/outfits/generate-multiple', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -61,6 +110,7 @@ export default function GenerateOutfitPage() {
           itemSource: itemSource,
           formalityLevel: formalityLevel,
           count: 3,
+          weather: weatherData,
         })
       })
 
@@ -125,92 +175,92 @@ export default function GenerateOutfitPage() {
   const currentOutfit = outfitOptions[currentOutfitIndex]
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-rose-50 to-teal-50 p-4">
-      <div className="max-w-2xl mx-auto pt-8">
+    <div className="min-h-screen bg-cream p-6">
+      <div className="max-w-2xl mx-auto pt-10">
         {/* Setup Step */}
         {step === 'setup' && (
-          <div className="bg-white rounded-2xl shadow-xl p-8">
-            <div className="flex justify-between items-center mb-6">
+          <div className="bg-beige rounded-3xl shadow-lg p-10 border border-taupe/10">
+            <div className="flex justify-between items-center mb-10">
               <div>
-                <h2 className="text-3xl font-bold text-gray-800 mb-2">Generate Outfits</h2>
-                <p className="text-gray-600">We'll create 3 options for you to choose from</p>
+                <h2 className="text-3xl font-light tracking-wide text-dark-taupe mb-2">GENERATE OUTFITS</h2>
+                <p className="text-warm-grey">We'll create 3 options for you to choose from</p>
               </div>
-              <button onClick={() => router.push('/dashboard')}>
-                <X className="w-6 h-6 text-gray-600 hover:text-gray-800" />
+              <button onClick={() => router.push('/dashboard')} className="p-2 hover:bg-taupe/20 rounded-full transition-colors">
+                <X className="w-6 h-6 text-warm-grey" />
               </button>
             </div>
 
             {/* Item Source Selection */}
-            <div className="mb-8">
-              <h3 className="text-lg font-semibold text-gray-800 mb-3">Use items from:</h3>
-              <div className="grid grid-cols-1 gap-3">
+            <div className="mb-10">
+              <h3 className="text-sm font-medium text-warm-grey tracking-widest uppercase mb-4">Use items from</h3>
+              <div className="grid grid-cols-1 gap-4">
                 <button
                   onClick={() => setItemSource('closet')}
-                  className={`p-4 rounded-lg border-2 transition text-left ${
+                  className={`p-5 rounded-2xl border-2 transition-all text-left ${
                     itemSource === 'closet'
-                      ? 'border-rose-500 bg-rose-50'
-                      : 'border-gray-200 hover:border-gray-300'
+                      ? 'border-blush bg-blush/30'
+                      : 'border-taupe/30 hover:border-taupe bg-cream/50'
                   }`}
                 >
-                  <div className="font-semibold text-gray-800">My Closet Only</div>
-                  <div className="text-sm text-gray-600">Create outfits using only items you own</div>
+                  <div className="font-medium text-dark-taupe">My Closet Only</div>
+                  <div className="text-sm text-warm-grey mt-1">Create outfits using only items you own</div>
                 </button>
 
                 <button
                   onClick={() => setItemSource('mix')}
-                  className={`p-4 rounded-lg border-2 transition text-left ${
+                  className={`p-5 rounded-2xl border-2 transition-all text-left ${
                     itemSource === 'mix'
-                      ? 'border-rose-500 bg-rose-50'
-                      : 'border-gray-200 hover:border-gray-300'
+                      ? 'border-blush bg-blush/30'
+                      : 'border-taupe/30 hover:border-taupe bg-cream/50'
                   }`}
                 >
-                  <div className="font-semibold text-gray-800">Mix & Match</div>
-                  <div className="text-sm text-gray-600">Combine your items with new suggestions</div>
+                  <div className="font-medium text-dark-taupe">Mix & Match</div>
+                  <div className="text-sm text-warm-grey mt-1">Combine your items with new suggestions</div>
                 </button>
 
                 <button
                   onClick={() => setItemSource('new')}
-                  className={`p-4 rounded-lg border-2 transition text-left ${
+                  className={`p-5 rounded-2xl border-2 transition-all text-left ${
                     itemSource === 'new'
-                      ? 'border-rose-500 bg-rose-50'
-                      : 'border-gray-200 hover:border-gray-300'
+                      ? 'border-blush bg-blush/30'
+                      : 'border-taupe/30 hover:border-taupe bg-cream/50'
                   }`}
                 >
-                  <div className="font-semibold text-gray-800">New Items Only</div>
-                  <div className="text-sm text-gray-600">Get fresh outfit ideas with new pieces to buy</div>
+                  <div className="font-medium text-dark-taupe">New Items Only</div>
+                  <div className="text-sm text-warm-grey mt-1">Get fresh outfit ideas with new pieces to buy</div>
                 </button>
               </div>
             </div>
 
             {/* Occasion Selection */}
-            <div className="mb-8">
-              <h3 className="text-lg font-semibold text-gray-800 mb-3">What's the occasion?</h3>
+            <div className="mb-10">
+              <h3 className="text-sm font-medium text-warm-grey tracking-widest uppercase mb-4">What's the occasion?</h3>
               <div className="grid grid-cols-2 gap-3">
                 {OCCASIONS.map((occasion) => (
                   <button
                     key={occasion}
                     onClick={() => setSelectedOccasion(occasion)}
-                    className={`p-4 rounded-lg border-2 transition ${
+                    className={`p-4 rounded-2xl border-2 transition-all ${
                       selectedOccasion === occasion
-                        ? 'border-rose-500 bg-rose-50'
-                        : 'border-gray-200 hover:border-gray-300'
+                        ? 'border-dark-taupe bg-dark-taupe text-cream'
+                        : 'border-taupe/30 hover:border-taupe text-dark-taupe bg-cream/50'
                     }`}
                   >
-                    <span className="font-medium text-gray-800">{occasion}</span>
+                    <span className="font-medium text-sm">{occasion}</span>
                   </button>
                 ))}
               </div>
             </div>
 
             {/* Formality Slider */}
-            <div className="mb-8">
-              <div className="flex justify-between items-center mb-3">
-                <h3 className="text-lg font-semibold text-gray-800">Style Level</h3>
-                <span className="text-sm font-medium text-rose-500 bg-rose-50 px-3 py-1 rounded-full">
+            <div className="mb-10">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-sm font-medium text-warm-grey tracking-widest uppercase">Style Level</h3>
+                <span className="text-sm font-medium text-dark-taupe bg-blush/40 px-4 py-1.5 rounded-full">
                   {getFormalityLabel(formalityLevel)}
                 </span>
               </div>
-              
+
               <div className="relative">
                 <input
                   type="range"
@@ -218,15 +268,15 @@ export default function GenerateOutfitPage() {
                   max="100"
                   value={formalityLevel}
                   onChange={(e) => setFormalityLevel(Number(e.target.value))}
-                  className="w-full h-3 rounded-lg appearance-none cursor-pointer"
+                  className="w-full h-2 rounded-full appearance-none cursor-pointer"
                   style={{
-                    background: `linear-gradient(to right, #93c5fd 0%, #c4b5fd 50%, #fbcfe8 100%)`
+                    background: `linear-gradient(to right, #F5DAD1 0%, #E2D8CF 50%, #C8B9AE 100%)`
                   }}
                 />
-                <div className="flex justify-between text-xs text-gray-500 mt-2">
-                  <span>👕 Casual</span>
-                  <span>👔 Smart Casual</span>
-                  <span>👗 Formal</span>
+                <div className="flex justify-between text-xs text-warm-grey mt-3">
+                  <span>Casual</span>
+                  <span>Smart Casual</span>
+                  <span>Formal</span>
                 </div>
               </div>
             </div>
@@ -234,17 +284,17 @@ export default function GenerateOutfitPage() {
             <button
               onClick={generateOutfits}
               disabled={!selectedOccasion || loading}
-              className="w-full bg-gradient-to-r from-rose-500 to-teal-500 text-white py-4 rounded-lg font-semibold hover:opacity-90 transition disabled:opacity-50 flex items-center justify-center gap-2"
+              className="w-full bg-blush text-dark-taupe py-5 rounded-full font-medium hover:bg-blush/80 transition-all disabled:opacity-50 flex items-center justify-center gap-3 shadow-sm tracking-wide"
             >
               {loading ? (
                 <>
                   <Loader2 className="w-5 h-5 animate-spin" />
-                  <span>Creating 3 outfit options...</span>
+                  <span>CREATING OPTIONS...</span>
                 </>
               ) : (
                 <>
                   <Sparkles className="w-5 h-5" />
-                  <span>Generate 3 Outfits</span>
+                  <span>GENERATE 3 OUTFITS</span>
                 </>
               )}
             </button>
@@ -253,7 +303,7 @@ export default function GenerateOutfitPage() {
 
         {/* Results Step */}
         {step === 'results' && currentOutfit && (
-          <div className="space-y-4">
+          <div className="space-y-6">
             {/* Header */}
             <div className="flex items-center justify-between">
               <button
@@ -261,40 +311,40 @@ export default function GenerateOutfitPage() {
                   setStep('setup')
                   setOutfitOptions([])
                 }}
-                className="flex items-center gap-2 text-gray-600 hover:text-gray-800"
+                className="flex items-center gap-2 text-warm-grey hover:text-dark-taupe transition-colors"
               >
                 <ChevronLeft className="w-5 h-5" />
-                <span>Back</span>
+                <span className="text-sm tracking-wide">BACK</span>
               </button>
-              <h2 className="text-xl font-bold text-gray-800">Choose Your Outfit</h2>
-              <div className="w-20"></div>
+              <h2 className="text-xl font-light tracking-wide text-dark-taupe">CHOOSE YOUR OUTFIT</h2>
+              <div className="w-24"></div>
             </div>
 
             {/* Outfit Carousel */}
-            <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
+            <div className="bg-beige rounded-3xl shadow-lg overflow-hidden border border-taupe/10">
               {/* Navigation Dots */}
-              <div className="flex justify-center gap-2 pt-4">
+              <div className="flex justify-center gap-3 pt-6">
                 {outfitOptions.map((_, index) => (
                   <button
                     key={index}
                     onClick={() => setCurrentOutfitIndex(index)}
-                    className={`w-3 h-3 rounded-full transition ${
+                    className={`w-2.5 h-2.5 rounded-full transition-all ${
                       index === currentOutfitIndex
-                        ? 'bg-rose-500'
-                        : 'bg-gray-300 hover:bg-gray-400'
+                        ? 'bg-dark-taupe w-8'
+                        : 'bg-taupe hover:bg-warm-grey'
                     }`}
                   />
                 ))}
               </div>
 
               {/* Outfit Card */}
-              <div className="p-6">
-                <div className="flex items-center justify-between mb-4">
+              <div className="p-8">
+                <div className="flex items-center justify-between mb-6">
                   <button
                     onClick={prevOutfit}
-                    className="p-2 hover:bg-gray-100 rounded-full transition"
+                    className="p-3 hover:bg-taupe/20 rounded-full transition-colors"
                   >
-                    <ChevronLeft className="w-6 h-6" />
+                    <ChevronLeft className="w-6 h-6 text-dark-taupe" />
                   </button>
                   
                   <div className="text-center">
@@ -329,7 +379,7 @@ export default function GenerateOutfitPage() {
                           <img
                             src={item.image_url}
                             alt={item.name}
-                            className="w-full aspect-square object-cover rounded-lg"
+                            className="w-full aspect-[4/5] object-cover rounded-lg"
                           />
                           <p className="text-xs text-center mt-1 truncate">{item.name}</p>
                         </div>

@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { ClosetItem } from '@/types'
-import { Plus, Home, X, Upload, RefreshCw, Pencil, Check, Loader2, Crop, Calendar, Clock, DollarSign } from 'lucide-react'
+import { Plus, Home, X, Upload, RefreshCw, Pencil, Check, Loader2, Crop, Calendar, Clock, DollarSign, Trash2, History, Search, Filter, ChevronDown } from 'lucide-react'
 import ReactCrop, { type Crop as CropType, centerCrop, makeAspectCrop } from 'react-image-crop'
 import 'react-image-crop/dist/ReactCrop.css'
 
@@ -26,6 +26,7 @@ export default function ClosetPage() {
   const [showPhotoServiceModal, setShowPhotoServiceModal] = useState(false)
   const [editingItem, setEditingItem] = useState<ClosetItem | null>(null)
   const [retryingId, setRetryingId] = useState<string | null>(null)
+  const [reclassifyingItems, setReclassifyingItems] = useState<string[]>([])
   const [savingEdit, setSavingEdit] = useState(false)
   
   // User email from auth
@@ -51,7 +52,19 @@ export default function ClosetPage() {
   const [crop, setCrop] = useState<CropType>()
   const [savingCrop, setSavingCrop] = useState(false)
   const imgRef = useRef<HTMLImageElement>(null)
-  
+
+  // Select mode state
+  const [selectMode, setSelectMode] = useState(false)
+  const [selectedItems, setSelectedItems] = useState<string[]>([])
+
+  // Filter state
+  const [searchQuery, setSearchQuery] = useState('')
+  const [showFilters, setShowFilters] = useState(false)
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([])
+  const [selectedColors, setSelectedColors] = useState<string[]>([])
+  const [selectedSeasons, setSelectedSeasons] = useState<string[]>([])
+  const [selectedVibes, setSelectedVibes] = useState<string[]>([])
+
   const router = useRouter()
   const supabase = createClient()
 
@@ -62,6 +75,7 @@ export default function ClosetPage() {
     fit: '',
     season: [] as string[],
     vibe: [] as string[],
+    material: '',
   })
 
   useEffect(() => {
@@ -198,6 +212,7 @@ export default function ClosetPage() {
       fit: item.fit || '',
       season: item.season || [],
       vibe: item.vibe || [],
+      material: item.material || '',
     })
   }
 
@@ -316,6 +331,7 @@ export default function ClosetPage() {
           fit: editForm.fit,
           season: editForm.season,
           vibe: editForm.vibe,
+          material: editForm.material || null,
           updated_at: new Date().toISOString(),
         })
         .eq('id', editingItem.id)
@@ -355,9 +371,172 @@ export default function ClosetPage() {
     }
   }
 
-  const isStuckItem = (item: ClosetItem) => {
-    return item.name === 'Analyzing...' || item.color === 'unknown'
+  const toggleSelectMode = () => {
+    setSelectMode(!selectMode)
+    setSelectedItems([])
   }
+
+  const toggleItemSelection = (itemId: string) => {
+    if (selectedItems.includes(itemId)) {
+      setSelectedItems(selectedItems.filter(id => id !== itemId))
+    } else {
+      setSelectedItems([...selectedItems, itemId])
+    }
+  }
+
+  const selectAllItems = () => {
+    if (selectedItems.length === closetItems.length) {
+      setSelectedItems([])
+    } else {
+      setSelectedItems(closetItems.map(item => item.id))
+    }
+  }
+
+  const deleteSelectedItems = async () => {
+    if (selectedItems.length === 0) return
+    if (!confirm(`Delete ${selectedItems.length} item(s)?`)) return
+
+    try {
+      const { error } = await supabase
+        .from('closet_items')
+        .update({ is_archived: true })
+        .in('id', selectedItems)
+
+      if (error) throw error
+
+      setSelectedItems([])
+      setSelectMode(false)
+      await loadClosetItems()
+    } catch (err) {
+      console.error(err)
+      alert('Failed to delete items')
+    }
+  }
+
+  const reclassifySelectedItems = async () => {
+    if (selectedItems.length === 0) return
+
+    setReclassifyingItems(selectedItems)
+
+    try {
+      // Process items in parallel batches of 10 for speed
+      const batchSize = 10
+      const batches = []
+
+      for (let i = 0; i < selectedItems.length; i += batchSize) {
+        const batch = selectedItems.slice(i, i + batchSize)
+        batches.push(batch)
+      }
+
+      // Process each batch in parallel
+      for (const batch of batches) {
+        const promises = batch.map(itemId => {
+          const item = closetItems.find(i => i.id === itemId)
+          if (!item) return Promise.resolve()
+
+          return fetch('/api/closet/classify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              imageUrl: item.image_url,
+              itemId: item.id
+            })
+          }).catch(err => {
+            console.error(`Failed to classify item ${itemId}:`, err)
+            // Continue with other items even if one fails
+          })
+        })
+
+        await Promise.all(promises)
+      }
+
+      await loadClosetItems()
+      setSelectedItems([])
+      setSelectMode(false)
+    } catch (err) {
+      console.error('Bulk reclassify error:', err)
+      alert('Failed to reclassify some items')
+    } finally {
+      setReclassifyingItems([])
+    }
+  }
+
+  const isStuckItem = (item: ClosetItem) => {
+    // Only consider stuck if analyzing/unknown AND item is older than 30 seconds
+    // (otherwise it might still be processing)
+    const isAnalyzing = item.name === 'Analyzing...' || item.color === 'unknown'
+    if (!isAnalyzing) return false
+
+    const createdAt = new Date(item.created_at).getTime()
+    const now = Date.now()
+    const ageInSeconds = (now - createdAt) / 1000
+
+    return ageInSeconds > 30
+  }
+
+  // Filter items based on search and filters
+  const filteredItems = closetItems.filter(item => {
+    // Search filter
+    if (searchQuery && !item.name.toLowerCase().includes(searchQuery.toLowerCase())) {
+      return false
+    }
+
+    // Category filter
+    if (selectedCategories.length > 0 && !selectedCategories.includes(item.category)) {
+      return false
+    }
+
+    // Color filter
+    if (selectedColors.length > 0) {
+      const itemColor = item.color?.toLowerCase() || ''
+      const matchesColor = selectedColors.some(color =>
+        itemColor.includes(color.toLowerCase())
+      )
+      if (!matchesColor) return false
+    }
+
+    // Season filter
+    if (selectedSeasons.length > 0) {
+      const hasMatchingSeason = selectedSeasons.some(season =>
+        item.season?.includes(season)
+      )
+      if (!hasMatchingSeason) return false
+    }
+
+    // Vibe filter
+    if (selectedVibes.length > 0) {
+      const hasMatchingVibe = selectedVibes.some(vibe =>
+        item.vibe?.includes(vibe)
+      )
+      if (!hasMatchingVibe) return false
+    }
+
+    return true
+  })
+
+  // Get unique colors from closet items
+  const availableColors = Array.from(new Set(
+    closetItems
+      .map(item => item.color)
+      .filter(color => color && color !== 'unknown')
+      .map(color => color!.toLowerCase())
+  )).sort()
+
+  // Clear all filters
+  const clearAllFilters = () => {
+    setSearchQuery('')
+    setSelectedCategories([])
+    setSelectedColors([])
+    setSelectedSeasons([])
+    setSelectedVibes([])
+  }
+
+  const activeFilterCount =
+    selectedCategories.length +
+    selectedColors.length +
+    selectedSeasons.length +
+    selectedVibes.length +
+    (searchQuery ? 1 : 0)
 
   const calculateTotal = () => {
     return 199 + (extraHours * 70)
@@ -424,130 +603,397 @@ export default function ClosetPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-4 border-rose-500 border-t-transparent"></div>
+      <div className="min-h-screen bg-cream flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-2 border-blush border-t-transparent"></div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-cream">
       {/* Header */}
-      <div className="bg-white shadow-sm sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-          <button 
-            onClick={() => router.push('/dashboard')} 
-            className="flex items-center gap-2 text-gray-600 hover:text-gray-800"
-          >
-            <Home className="w-5 h-5" />
-            <span>Back</span>
-          </button>
-          <h2 className="text-xl font-bold">My Closet</h2>
-          <div className="flex items-center gap-2">
+      <div className="bg-beige border-b border-taupe/20 sticky top-0 z-10 backdrop-blur-sm bg-beige/90">
+        <div className="max-w-7xl mx-auto px-6 py-6 flex items-center justify-between">
+          {selectMode ? (
             <button
-              onClick={() => setShowPhotoServiceModal(true)}
-              className="text-rose-500 text-sm font-medium hover:text-rose-600 hidden sm:block"
+              onClick={selectAllItems}
+              className="text-dark-taupe font-medium hover:text-warm-grey transition-colors"
             >
-              ✨ We'll do it for you
+              {selectedItems.length === closetItems.length ? 'Deselect All' : 'Select All'}
             </button>
+          ) : (
             <button
-              onClick={() => setShowUploadModal(true)}
-              className="flex items-center gap-2 bg-rose-500 text-white px-4 py-2 rounded-lg hover:bg-rose-600"
+              onClick={() => router.push('/dashboard')}
+              className="flex items-center gap-2 text-warm-grey hover:text-dark-taupe transition-colors"
             >
-              <Plus className="w-5 h-5" />
-              <span>Add Items</span>
+              <Home className="w-5 h-5" />
+              <span className="text-sm tracking-wide">BACK</span>
             </button>
-          </div>
+          )}
+          <h2 className="text-2xl font-light tracking-wide text-dark-taupe">MY CLOSET</h2>
+          {selectMode ? (
+            <button
+              onClick={toggleSelectMode}
+              className="flex items-center gap-2 text-warm-grey hover:text-dark-taupe transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          ) : (
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => router.push('/outfits/history')}
+                className="p-2 hover:bg-taupe/20 rounded-full transition-colors"
+                title="Outfit History"
+              >
+                <History className="w-5 h-5 text-warm-grey" />
+              </button>
+              {closetItems.length > 0 && (
+                <button
+                  onClick={toggleSelectMode}
+                  className="text-dark-taupe text-sm font-medium hover:text-warm-grey tracking-wide transition-colors"
+                >
+                  SELECT
+                </button>
+              )}
+              <button
+                onClick={() => setShowUploadModal(true)}
+                className="flex items-center gap-2 bg-blush text-dark-taupe px-5 py-2.5 rounded-full hover:bg-blush/80 transition-all shadow-sm"
+              >
+                <Plus className="w-4 h-4" />
+                <span className="text-sm tracking-wide">ADD</span>
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 py-8">
+      <div className="max-w-7xl mx-auto px-6 py-10">
+        {/* Search and Filters */}
+        {closetItems.length > 0 && !selectMode && (
+          <div className="mb-10 space-y-6">
+            {/* Search Bar */}
+            <div className="flex gap-4">
+              <div className="flex-1 relative">
+                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-4 h-4 text-warm-grey" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search your closet..."
+                  className="w-full pl-11 pr-4 py-3 bg-beige border border-taupe/30 rounded-full text-dark-taupe placeholder-warm-grey focus:outline-none focus:border-blush transition-colors text-sm"
+                />
+              </div>
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className={`flex items-center gap-2 px-6 py-3 rounded-full border transition-all ${
+                  showFilters || activeFilterCount > 0
+                    ? 'bg-blush text-dark-taupe border-blush shadow-sm'
+                    : 'bg-beige text-dark-taupe border-taupe/30 hover:border-blush'
+                }`}
+              >
+                <Filter className="w-4 h-4" />
+                <span className="text-sm tracking-wide">FILTER</span>
+                {activeFilterCount > 0 && (
+                  <span className="bg-dark-taupe text-cream text-xs font-medium px-2 py-0.5 rounded-full">
+                    {activeFilterCount}
+                  </span>
+                )}
+              </button>
+            </div>
+
+            {/* Filter Panel */}
+            {showFilters && (
+              <div className="bg-beige/50 rounded-2xl border border-taupe/20 p-8 space-y-8">
+                {/* Category Filter */}
+                <div>
+                  <label className="block text-xs font-medium text-warm-grey tracking-widest uppercase mb-3">Category</label>
+                  <div className="flex flex-wrap gap-2.5">
+                    {CATEGORIES.map(category => (
+                      <button
+                        key={category}
+                        onClick={() => {
+                          if (selectedCategories.includes(category)) {
+                            setSelectedCategories(selectedCategories.filter(c => c !== category))
+                          } else {
+                            setSelectedCategories([...selectedCategories, category])
+                          }
+                        }}
+                        className={`px-4 py-2 rounded-full text-sm transition-all capitalize ${
+                          selectedCategories.includes(category)
+                            ? 'bg-dark-taupe text-cream shadow-sm'
+                            : 'bg-beige text-warm-grey hover:bg-taupe/30 border border-taupe/20'
+                        }`}
+                      >
+                        {category}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Color Filter */}
+                <div>
+                  <label className="block text-xs font-medium text-warm-grey tracking-widest uppercase mb-3">Color</label>
+                  <div className="flex flex-wrap gap-2.5">
+                    {availableColors.map(color => (
+                      <button
+                        key={color}
+                        onClick={() => {
+                          if (selectedColors.includes(color)) {
+                            setSelectedColors(selectedColors.filter(c => c !== color))
+                          } else {
+                            setSelectedColors([...selectedColors, color])
+                          }
+                        }}
+                        className={`px-4 py-2 rounded-full text-sm transition-all capitalize ${
+                          selectedColors.includes(color)
+                            ? 'bg-blush text-dark-taupe shadow-sm'
+                            : 'bg-beige text-warm-grey hover:bg-taupe/30 border border-taupe/20'
+                        }`}
+                      >
+                        {color}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Season Filter */}
+                <div>
+                  <label className="block text-xs font-medium text-warm-grey tracking-widest uppercase mb-3">Season</label>
+                  <div className="flex flex-wrap gap-2.5">
+                    {SEASONS.map(season => (
+                      <button
+                        key={season}
+                        onClick={() => {
+                          if (selectedSeasons.includes(season)) {
+                            setSelectedSeasons(selectedSeasons.filter(s => s !== season))
+                          } else {
+                            setSelectedSeasons([...selectedSeasons, season])
+                          }
+                        }}
+                        className={`px-4 py-2 rounded-full text-sm transition-all capitalize ${
+                          selectedSeasons.includes(season)
+                            ? 'bg-dark-taupe text-cream shadow-sm'
+                            : 'bg-beige text-warm-grey hover:bg-taupe/30 border border-taupe/20'
+                        }`}
+                      >
+                        {season}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Vibe Filter */}
+                <div>
+                  <label className="block text-xs font-medium text-warm-grey tracking-widest uppercase mb-3">Vibe</label>
+                  <div className="flex flex-wrap gap-2.5">
+                    {VIBES.map(vibe => (
+                      <button
+                        key={vibe}
+                        onClick={() => {
+                          if (selectedVibes.includes(vibe)) {
+                            setSelectedVibes(selectedVibes.filter(v => v !== vibe))
+                          } else {
+                            setSelectedVibes([...selectedVibes, vibe])
+                          }
+                        }}
+                        className={`px-4 py-2 rounded-full text-sm transition-all capitalize ${
+                          selectedVibes.includes(vibe)
+                            ? 'bg-blush text-dark-taupe shadow-sm'
+                            : 'bg-beige text-warm-grey hover:bg-taupe/30 border border-taupe/20'
+                        }`}
+                      >
+                        {vibe}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Clear Filters */}
+                {activeFilterCount > 0 && (
+                  <div className="pt-6 border-t border-taupe/20 flex justify-between items-center">
+                    <span className="text-sm text-warm-grey">
+                      {filteredItems.length} of {closetItems.length} items shown
+                    </span>
+                    <button
+                      onClick={clearAllFilters}
+                      className="text-sm text-dark-taupe font-medium hover:text-warm-grey transition-colors tracking-wide"
+                    >
+                      CLEAR ALL
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Active Filters Summary */}
+            {activeFilterCount > 0 && !showFilters && (
+              <div className="flex items-center gap-3 text-sm text-warm-grey">
+                <span>{filteredItems.length} of {closetItems.length} items</span>
+                <button
+                  onClick={clearAllFilters}
+                  className="text-dark-taupe font-medium hover:text-warm-grey transition-colors tracking-wide"
+                >
+                  CLEAR
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
         {closetItems.length === 0 ? (
-          <div className="text-center py-12 bg-white rounded-xl">
-            <Upload className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-600 mb-6">Your closet is empty. Start adding items!</p>
-            
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+          <div className="text-center py-20 bg-beige rounded-3xl border border-taupe/20">
+            <Upload className="w-16 h-16 text-taupe mx-auto mb-6" />
+            <p className="text-warm-grey mb-8 text-lg">Your closet is empty. Start adding items!</p>
+
+            <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">
               <button
                 onClick={() => setShowUploadModal(true)}
-                className="bg-gradient-to-r from-rose-500 to-teal-500 text-white px-6 py-3 rounded-lg font-semibold hover:opacity-90 transition"
+                className="bg-blush text-dark-taupe px-8 py-4 rounded-full font-medium hover:bg-blush/80 transition-all shadow-sm tracking-wide"
               >
-                Upload Photos Myself
+                UPLOAD PHOTOS
               </button>
-              
-              <span className="text-gray-400">or</span>
-              
+
+              <span className="text-taupe text-sm">or</span>
+
               <button
-                onClick={() => setShowPhotoServiceModal(true)}
-                className="bg-white border-2 border-rose-500 text-rose-500 px-6 py-3 rounded-lg font-semibold hover:bg-rose-50 transition"
+                disabled
+                className="bg-beige border-2 border-taupe/40 text-warm-grey px-8 py-4 rounded-full font-medium opacity-60 cursor-not-allowed tracking-wide"
+                title="Coming soon"
               >
-                ✨ Let Us Handle It - $199
+                PROFESSIONAL SHOOT — COMING SOON
               </button>
             </div>
           </div>
+        ) : filteredItems.length === 0 ? (
+          <div className="text-center py-20 bg-beige rounded-3xl border border-taupe/20">
+            <Filter className="w-16 h-16 text-taupe mx-auto mb-6" />
+            <p className="text-warm-grey mb-6 text-lg">No items match your filters</p>
+            <button
+              onClick={clearAllFilters}
+              className="text-dark-taupe font-medium hover:text-warm-grey transition-colors tracking-wide"
+            >
+              CLEAR FILTERS
+            </button>
+          </div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-            {closetItems.map((item) => (
-              <div key={item.id} className="bg-white rounded-lg shadow overflow-hidden hover:shadow-lg transition group">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+            {filteredItems.map((item) => (
+              <div
+                key={item.id}
+                className="bg-beige rounded-2xl overflow-hidden hover:shadow-lg transition-all duration-300 group relative border border-taupe/10"
+                onClick={() => selectMode && toggleItemSelection(item.id)}
+              >
                 <div className="relative">
-                  <img 
-                    src={item.image_url} 
-                    alt={item.name} 
-                    className="w-full aspect-square object-cover" 
+                  <img
+                    src={item.image_url}
+                    alt={item.name}
+                    className={`w-full aspect-[4/5] object-cover ${selectMode ? 'cursor-pointer' : ''}`}
                   />
-                  
-                  <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition">
-                    <button
-                      onClick={() => openEditModal(item)}
-                      className="bg-blue-500 text-white rounded-full p-1.5 hover:bg-blue-600 transition"
-                      title="Edit item"
-                    >
-                      <Pencil className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      onClick={() => deleteItem(item.id)}
-                      className="bg-red-500 text-white rounded-full p-1.5 hover:bg-red-600 transition"
-                      title="Delete item"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
 
-                  {isStuckItem(item) && (
-                    <div className="absolute bottom-2 left-2 right-2">
+                  {selectMode ? (
+                    <div className="absolute top-3 right-3">
+                      <div className={`w-7 h-7 rounded-full border-2 flex items-center justify-center transition-all ${
+                        selectedItems.includes(item.id)
+                          ? 'bg-blush border-blush'
+                          : 'bg-cream/80 border-taupe/40 backdrop-blur-sm'
+                      }`}>
+                        {selectedItems.includes(item.id) && (
+                          <Check className="w-4 h-4 text-dark-taupe" />
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="absolute top-3 right-3 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          retryClassification(item)
+                        }}
+                        disabled={retryingId === item.id}
+                        className="bg-blush/90 backdrop-blur-sm text-dark-taupe rounded-full p-2 hover:bg-blush transition-all disabled:opacity-50 shadow-sm"
+                        title="Re-classify item"
+                      >
+                        <RefreshCw className={`w-3.5 h-3.5 ${retryingId === item.id ? 'animate-spin' : ''}`} />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          openEditModal(item)
+                        }}
+                        className="bg-taupe/90 backdrop-blur-sm text-cream rounded-full p-2 hover:bg-dark-taupe transition-all shadow-sm"
+                        title="Edit item"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          deleteItem(item.id)
+                        }}
+                        className="bg-dark-taupe/90 backdrop-blur-sm text-cream rounded-full p-2 hover:bg-dark-taupe transition-all shadow-sm"
+                        title="Delete item"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
+
+                  {isStuckItem(item) && !selectMode && (
+                    <div className="absolute bottom-3 left-3 right-3">
                       <button
                         onClick={() => retryClassification(item)}
                         disabled={retryingId === item.id}
-                        className="w-full flex items-center justify-center gap-1.5 bg-amber-500 text-white text-xs font-medium py-1.5 px-2 rounded-lg hover:bg-amber-600 transition disabled:opacity-50"
+                        className="w-full flex items-center justify-center gap-2 bg-blush/95 backdrop-blur-sm text-dark-taupe text-xs font-medium py-2 px-3 rounded-full hover:bg-blush transition-all disabled:opacity-50 shadow-sm"
                       >
                         {retryingId === item.id ? (
                           <>
                             <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                            Retrying...
+                            <span>ANALYZING...</span>
                           </>
                         ) : (
                           <>
                             <RefreshCw className="w-3.5 h-3.5" />
-                            Retry Analysis
+                            <span>RETRY</span>
                           </>
                         )}
                       </button>
                     </div>
                   )}
                 </div>
-                
-                <div className="p-3">
-                  <p className={`font-medium text-sm ${isStuckItem(item) ? 'text-amber-600' : ''}`}>
+
+                <div className="p-4">
+                  <p className={`font-normal text-sm leading-relaxed ${isStuckItem(item) ? 'text-dark-taupe' : 'text-dark-taupe'}`}>
                     {item.name}
                   </p>
-                  <p className="text-xs text-gray-500 capitalize">{item.category}</p>
+                  <p className="text-xs text-warm-grey capitalize mt-1">{item.category}</p>
                   {item.color && item.color !== 'unknown' && (
-                    <p className="text-xs text-gray-400 capitalize">{item.color}</p>
+                    <p className="text-xs text-taupe capitalize mt-0.5">{item.color}</p>
                   )}
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* Floating Action Buttons (visible in select mode when items are selected) */}
+        {selectMode && selectedItems.length > 0 && (
+          <div className="fixed bottom-10 right-10 flex flex-col gap-4 z-20">
+            <button
+              onClick={reclassifySelectedItems}
+              disabled={reclassifyingItems.length > 0}
+              className="bg-blush text-dark-taupe rounded-full p-5 shadow-xl hover:bg-blush/90 transition-all disabled:opacity-50 border border-taupe/20"
+              title={`Re-classify ${selectedItems.length} item(s)`}
+            >
+              <RefreshCw className={`w-6 h-6 ${reclassifyingItems.length > 0 ? 'animate-spin' : ''}`} />
+            </button>
+            <button
+              onClick={deleteSelectedItems}
+              className="bg-dark-taupe text-cream rounded-full p-5 shadow-xl hover:bg-dark-taupe/90 transition-all border border-taupe/20"
+              title={`Delete ${selectedItems.length} item(s)`}
+            >
+              <Trash2 className="w-6 h-6" />
+            </button>
           </div>
         )}
       </div>
@@ -581,6 +1027,21 @@ export default function ClosetPage() {
               <div className="mt-4 text-center">
                 <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-rose-500 border-t-transparent"></div>
                 <p className="mt-2 text-gray-600">Uploading...</p>
+              </div>
+            )}
+
+            {!uploading && (
+              <div className="mt-6 pt-6 border-t border-gray-200">
+                <button
+                  disabled
+                  className="w-full border-2 border-gray-300 text-gray-400 px-6 py-3 rounded-lg font-semibold cursor-not-allowed flex items-center justify-center gap-2"
+                  title="Coming soon"
+                >
+                  ✨ We'll do it for you — COMING SOON
+                </button>
+                <p className="text-xs text-gray-400 text-center mt-2">
+                  Professional photographer service launching soon
+                </p>
               </div>
             )}
           </div>
@@ -715,6 +1176,17 @@ export default function ClosetPage() {
                       onChange={(e) => setEditForm({ ...editForm, color: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent"
                       placeholder="e.g., Navy Blue"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Material (optional)</label>
+                    <input
+                      type="text"
+                      value={editForm.material}
+                      onChange={(e) => setEditForm({ ...editForm, material: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent"
+                      placeholder="e.g., Cotton, Denim, Leather, Silk"
                     />
                   </div>
 

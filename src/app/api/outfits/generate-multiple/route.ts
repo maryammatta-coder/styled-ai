@@ -124,20 +124,65 @@ const FASHION_RULES = {
       dressy: 'Elegant dress OR dressy pants with nice top + heels',
       formal: 'Your best dress + elegant heels.'
     },
+    'Business': {
+      casual: 'Smart jeans + blouse + loafers',
+      dressy: 'Tailored pants + button-up + heels or blazer + trousers',
+      formal: 'Suit or formal dress + elegant heels'
+    },
     'Brunch': {
       casual: 'Jeans + nice top + comfortable shoes. Sundress works.',
       dressy: 'Midi dress OR nice pants + blouse + cute heels',
       formal: 'Elegant day dress + heels'
     },
-    'Casual Outing': {
+    'Girls Night Out': {
+      casual: 'Fun top + jeans + cute shoes',
+      dressy: 'Trendy dress OR dressy top + pants + heels',
+      formal: 'Cocktail dress + heels'
+    },
+    'Casual Day Out': {
       casual: 'Jeans/shorts + t-shirt/casual top + sneakers/sandals',
       dressy: 'Elevated casual - nice jeans + blouse + loafers',
       formal: 'N/A'
     },
+    'Dinner': {
+      casual: 'Nice jeans + elevated top + comfortable shoes',
+      dressy: 'Dress OR dressy pants + nice top + heels/nice flats',
+      formal: 'Elegant dress + heels'
+    },
+    'Sports Event': {
+      casual: 'Jeans + team shirt/casual top + sneakers',
+      dressy: 'Nice jeans + casual top + clean sneakers',
+      formal: 'N/A'
+    },
+    'Concert': {
+      casual: 'Jeans + band tee/fun top + comfortable shoes',
+      dressy: 'Trendy outfit - jeans + statement top + boots/heels',
+      formal: 'Dress + heels (for formal venues)'
+    },
+    'Errands': {
+      casual: 'Comfortable outfit - jeans/leggings + t-shirt + sneakers',
+      dressy: 'Athleisure or elevated basics - nice top + pants + clean sneakers',
+      formal: 'N/A'
+    },
+    'Travel Day': {
+      casual: 'Comfortable layers - jeans + t-shirt + sneakers + jacket',
+      dressy: 'Elevated comfortable - nice pants + top + stylish sneakers',
+      formal: 'N/A'
+    },
+    'Beach Day': {
+      casual: 'Swimsuit + cover-up + sandals',
+      dressy: 'Cute swimsuit + flowy cover-up + sandals',
+      formal: 'N/A'
+    },
+    'Formal Event': {
+      casual: 'N/A',
+      dressy: 'Elegant dress + heels OR tailored suit',
+      formal: 'Formal gown/cocktail dress + elegant heels. Think gala, wedding, black tie.'
+    },
     'Party': {
-      casual: 'Fun dress OR jeans + statement top + fun shoes',
-      dressy: 'Party dress + heels',
-      formal: 'Cocktail dress or gown + elegant heels'
+      casual: 'Fun casual outfit - jeans + statement top + cute shoes',
+      dressy: 'Trendy dress OR dressy top + skirt/pants + heels',
+      formal: 'Cocktail dress + heels'
     }
   },
   
@@ -245,6 +290,9 @@ function isWeatherAppropriate(item: ClosetItem, temp: number): boolean {
     if (name.includes('shorts') || name.includes('mini skirt')) return false
     if (name.includes('sandal') || name.includes('open-toe') || name.includes('open toe')) return false
   }
+
+  // Note: We DON'T block dresses in cold weather - occasion comes first!
+  // If it's a formal event in winter, you wear a dress with a warm coat.
   
   return true
 }
@@ -252,19 +300,32 @@ function isWeatherAppropriate(item: ClosetItem, temp: number): boolean {
 function isShoeAppropriateForFormality(item: ClosetItem, formalityLevel: number): boolean {
   const name = (item.name || '').toLowerCase()
   const formality = getFormalityCategory(formalityLevel)
-  
-  // For casual, reject dressy shoes
+
+  // For casual, reject ALL heels - absolutely no exceptions
   if (formality === 'casual') {
-    if (name.includes('stiletto') || name.includes('pump')) return false
-    if (name.includes('strappy') && name.includes('heel')) return false
-    if (name.includes('wedge')) return false  // Wedges are dressy
-    if (name.includes('slingback')) return false  // Slingbacks are dressy
-    // Allow block heels and low heels for casual
-    if (name.includes('heel') && !name.includes('block') && !name.includes('low') && !name.includes('kitten')) {
-      return false
-    }
+    // ANY mention of heel = not casual
+    if (name.includes('heel')) return false
+    if (name.includes('stiletto')) return false
+    if (name.includes('pump')) return false
+    if (name.includes('wedge')) return false
+    if (name.includes('slingback')) return false
+    if (name.includes('strappy')) return false
+    if (name.includes('platform') && !name.includes('sneaker')) return false
+    // Only allow: sneakers, flats, loafers, slides, sandals (flat), boots (flat)
   }
-  
+
+  // Smart casual: filter out nighttime/party heels but allow daytime dressy shoes
+  if (formality === 'smartCasual') {
+    // Filter out sparkly/glittery/nighttime heels
+    if (name.includes('sparkle') || name.includes('sparkly')) return false
+    if (name.includes('glitter') || name.includes('glittery')) return false
+    if (name.includes('rhinestone') || name.includes('crystal')) return false
+    if (name.includes('strappy') && name.includes('heel')) return false  // Strappy heels are too nighttime
+    if (name.includes('stiletto')) return false  // Stilettos are too formal/nighttime
+    if (name.includes('combat')) return false  // Combat boots are too casual
+    // Allow: wedges, kitten heels, block heels, mules, slingbacks, loafers, clean sneakers, ankle boots, flats
+  }
+
   // For formal, reject casual shoes
   if (formality === 'formal') {
     if (name.includes('sneaker')) return false
@@ -273,7 +334,7 @@ function isShoeAppropriateForFormality(item: ClosetItem, formalityLevel: number)
     if (name.includes('combat')) return false
     if (name.includes('boot') && !name.includes('heel')) return false  // Flat boots not formal
   }
-  
+
   return true
 }
 
@@ -293,32 +354,56 @@ function isItemAppropriateForFormality(item: ClosetItem, formalityLevel: number)
     }
   }
   
-  // For CASUAL, reject dressy items
+  // For CASUAL, reject dressy items AND club/party items
   if (formality === 'casual') {
-    // Dressy tops
+    // Reject dressy/party tops
     if (name.includes('drape') || name.includes('draped')) return false
     if (name.includes('silk') && category === 'top') return false
     if (name.includes('satin')) return false
+    if (name.includes('lace')) return false // Lace is too dressy for casual
     if (name.includes('sequin') || name.includes('sparkle')) return false
     if (name.includes('cocktail') || name.includes('formal') || name.includes('evening')) return false
     if (name.includes('halter') && !name.includes('casual')) return false
-    
+    if (name.includes('strapless')) return false // Strapless tops are too dressy/clubby for casual
+    if (name.includes('tube top')) return false
+    if (name.includes('corset')) return false
+    if (name.includes('bustier')) return false
+
     // Dressy sleeve styles
     if (name.includes('bell sleeve') || name.includes('puff sleeve') || name.includes('balloon sleeve')) return false
-    
+
     // Dressy dresses - NOT casual
     if (category === 'dress') {
-      // Tight/fitted dresses are not casual
+      if (name.includes('lace')) return false // Lace dresses are too dressy
+      if (name.includes('midi') && !name.includes('casual')) return false // Midi dresses tend to be dressy
       if (name.includes('bodycon') || name.includes('fitted') || name.includes('tight')) return false
-      // Maxi dresses are typically dressy (unless explicitly casual)
       if (name.includes('maxi') && !name.includes('casual')) return false
-      // Formal dress styles
       if (name.includes('cocktail') || name.includes('evening') || name.includes('formal')) return false
-      // Floral print tight dresses are dressy
+      if (name.includes('strapless') || name.includes('tube')) return false
       if (name.includes('floral') && (name.includes('fitted') || name.includes('bodycon') || name.includes('print maxi'))) return false
     }
   }
-  
+
+  // For SMART CASUAL, reject items that are TOO formal
+  // But allow mixing casual and dressy pieces
+  if (formality === 'smartCasual') {
+    // FIRST: Block ALL maxi dresses regardless of category detection
+    if (name.includes('maxi')) return false
+
+    // Reject fancy formal dresses
+    if (category === 'dress') {
+      if (name.includes('gown')) return false
+      if (name.includes('cocktail')) return false
+      if (name.includes('evening')) return false
+      if (name.includes('sequin') || name.includes('sparkle')) return false
+      if (name.includes('satin') && !name.includes('midi') && !name.includes('mini')) return false
+    }
+    // Reject formal tops and items
+    if (name.includes('sequin') || name.includes('sparkle')) return false
+    if (name.includes('formal') || name.includes('evening')) return false
+    if (name.includes('cocktail')) return false
+  }
+
   // For FORMAL, reject casual items
   if (formality === 'formal') {
     if (name.includes('t-shirt') || name.includes('tee ')) return false
@@ -522,20 +607,30 @@ export async function POST(request: NextRequest) {
     }
 
     const appropriate: Record<string, ClosetItem[]> = {
-      top: [], bottom: [], dress: [], shoes: [], outerwear: []
+      top: [], bottom: [], dress: [], shoes: [], outerwear: [], bags: []
     }
 
     closetItems.forEach((item: ClosetItem) => {
       const cat = categorizeItem(item)
       if (categorized[cat]) categorized[cat].push(item)
-      
+
+      // Check if this is a bag
+      const name = (item.name || '').toLowerCase()
+      const isBag = name.includes('bag') || name.includes('purse') || name.includes('handbag') ||
+                    name.includes('clutch') || name.includes('tote') || name.includes('satchel') ||
+                    name.includes('crossbody') || name.includes('shoulder bag')
+
       // Filter for weather + formality appropriateness
       const weatherOK = isWeatherAppropriate(item, temperature)
       const shoesFormalityOK = cat !== 'shoes' || isShoeAppropriateForFormality(item, formalityLevel)
       const itemFormalityOK = isItemAppropriateForFormality(item, formalityLevel)
-      
-      if (weatherOK && shoesFormalityOK && itemFormalityOK && appropriate[cat]) {
-        appropriate[cat].push(item)
+
+      if (weatherOK && shoesFormalityOK && itemFormalityOK) {
+        if (isBag) {
+          appropriate.bags.push(item)
+        } else if (appropriate[cat]) {
+          appropriate[cat].push(item)
+        }
       }
     })
 
@@ -546,7 +641,7 @@ export async function POST(request: NextRequest) {
     } else if (formalityCat === 'dressy') {
       outfitStructure = 'DRESSY: 2 outfits can be DRESS + HEELS, 1 should be TOP + BOTTOM + HEELS.'
     } else if (formalityCat === 'smartCasual') {
-      outfitStructure = 'SMART CASUAL: Mix - some TOP + BOTTOM + SHOES, maybe 1 dress.'
+      outfitStructure = 'SMART CASUAL: MUST MIX casual and elevated pieces. Examples: casual top + dressy pants + heels, OR dressy top + jeans + heels, OR mini dress + sneakers. NEVER all casual (tank+shorts+sneakers) or all dressy (dress+heels).'
     } else {
       outfitStructure = 'CASUAL: Prefer TOP + BOTTOM + COMFORTABLE SHOES (sneakers, flats, loafers). Dress optional but keep it casual.'
     }
@@ -571,6 +666,8 @@ export async function POST(request: NextRequest) {
 - Formality: ${formalityCat.toUpperCase()} (${formalityRules.description})
 - Weather: ${temperature}°F (${weatherCat.toUpperCase()})
 - Client Style: ${user.style_vibe?.join(', ') || 'Classic'}
+${user.avoid_colors && user.avoid_colors.length > 0 ? `- 🚫 AVOID THESE COLORS (RED FLAGS): ${user.avoid_colors.join(', ')} - Do NOT use items in these colors!` : ''}
+${user.color_palette && user.color_palette.length > 0 ? `- Color preferences (optional, don't force): ${user.color_palette.join(', ')}` : ''}
 
 ## OCCASION GUIDANCE
 For ${occasion} at ${formalityCat} level: ${relevantGuidance}
@@ -599,19 +696,25 @@ ${formatItems(appropriate.dress)}
 SHOES:
 ${formatItems(appropriate.shoes)}
 
-OUTERWEAR (only if temp < 60°F):
+OUTERWEAR ${temperature < 50 ? '(REQUIRED for cold weather!)' : '(only if temp < 60°F)'}:
 ${temperature < 60 ? formatItems(appropriate.outerwear) : '(not needed for this weather)'}
+${temperature < 50 ? '\n⚠️ IMPORTANT: If using a dress in this cold weather, you MUST include outerwear!' : ''}
+
+BAGS/PURSES (ALWAYS REQUIRED - MANDATORY FOR EVERY OUTFIT):
+${appropriate.bags.length > 0 ? formatItems(appropriate.bags) : '⚠️ NO BAGS IN CLOSET - You MUST suggest a new bag in new_items for EVERY outfit!'}
 
 ## STRICT RULES
-1. EVERY outfit MUST include SHOES
-2. DRESS outfit = dress + shoes only (NO tops, NO pants)
-3. TOP+BOTTOM outfit = 1 top + 1 bottom + 1 shoes
-4. Only use IDs from the lists above
-5. ${itemSource === 'closet' ? 'new_items must be []' : ''}
-6. ${formalityCat === 'casual' ? 'NO heels/stilettos - use sneakers, flats, loafers!' : ''}
-7. ${temperature >= 70 ? 'NO long sleeves, NO sweaters, NO ribbed - too warm!' : ''}
-8. COLOR COORDINATION: Don't pair purple with blue, red with pink, or orange with green. Neutrals (black, white, beige, gray) go with everything.
-9. STYLE COHESION: Don't mix streetwear (Yeezys, Jordans, athletic) with polished items (structured dresses, heels, blazers). Keep the aesthetic consistent!
+1. 🚨 BAGS ARE MANDATORY: EVERY outfit MUST include a bag/purse. ${appropriate.bags.length === 0 ? 'Since there are NO bags in the closet, you MUST suggest a new bag in new_items for EVERY outfit (even for closet-only outfits).' : 'Use a bag from the BAGS list above.'}
+2. EVERY outfit MUST include SHOES
+3. DRESS outfit = dress + shoes + BAG ${temperature < 50 ? '+ OUTERWEAR (required for cold!)' : '(NO tops, NO pants)'}
+4. TOP+BOTTOM outfit = 1 top + 1 bottom + 1 shoes + BAG ${temperature < 50 ? '+ outerwear if needed' : ''}
+5. Only use IDs from the lists above
+6. ${itemSource === 'closet' ? 'new_items must be [] UNLESS suggesting a bag (bags are mandatory even for closet-only)' : ''}
+7. ${formalityCat === 'casual' ? 'NO heels/stilettos - use sneakers, flats, loafers! NO lace, satin, or midi dresses!' : ''}
+8. ${temperature >= 70 ? 'NO long sleeves, NO sweaters, NO ribbed - too warm!' : temperature < 50 ? 'COLD WEATHER: MUST add outerwear if wearing a dress! For casual occasions, prefer pants over dresses in cold weather.' : ''}
+9. ${user.avoid_colors && user.avoid_colors.length > 0 ? `🚫 CRITICAL: NEVER use items in these colors: ${user.avoid_colors.join(', ')}. These are RED FLAGS - completely avoid them!` : ''}
+10. COLOR COORDINATION: Don't pair purple with blue, red with pink, or orange with green. Neutrals (black, white, beige, gray) go with everything. ${user.color_palette && user.color_palette.length > 0 ? `Client likes ${user.color_palette.join(', ')} but don't force - prioritize style and occasion first.` : ''}
+11. STYLE COHESION FOR CASUAL: Athletic/designer sneakers (Yeezys, Jordans) should be paired with athleisure or street-casual (joggers, hoodies, casual tees), NOT with mini skirts, denim skirts, or dressy tops. Keep casual outfits simple and cohesive - no mixing streetwear with dressy pieces!
 
 ## RESPONSE (JSON only)
 {
@@ -627,7 +730,7 @@ ${temperature < 60 ? formatItems(appropriate.outerwear) : '(not needed for this 
   ]
 }
 
-Create ${count} DIFFERENT outfits. Every outfit MUST have shoes!`
+Create ${count} DIFFERENT outfits. Every outfit MUST have shoes AND a bag!`
 
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
@@ -636,8 +739,8 @@ Create ${count} DIFFERENT outfits. Every outfit MUST have shoes!`
           role: 'system',
           content: `You are an expert fashion stylist. Critical rules:
 1. ALWAYS include shoes
-2. ${formalityCat === 'casual' ? 'CASUAL = sneakers, flats, loafers. NO heels!' : formalityCat === 'formal' ? 'FORMAL = elegant dresses + heels' : 'Match shoes to formality'}
-3. ${temperature >= 70 ? 'WARM: No long sleeves, no sweaters, no ribbed, no heavy fabrics!' : temperature < 50 ? 'COLD: Warm layers needed' : ''}
+2. ${formalityCat === 'casual' ? 'CASUAL = appropriate casual tops (t-shirt, tank, casual blouse - NO strapless/tube/corset/lace tops) + jeans/casual pants/skirt + sneakers/flats/loafers. OR simple casual dress + sneakers. NO heels! NO clubby/dressy items! Keep it simple and wearable.' : formalityCat === 'smartCasual' ? 'SMART CASUAL = MIX casual and elevated pieces. Examples: tank+jeans+heels, dressy top+shorts+slides, mini dress+sneakers. NEVER tank+shorts+sneakers (all casual) or dress+heels (all dressy).' : formalityCat === 'formal' ? 'FORMAL = elegant dresses + heels' : 'Match shoes to formality'}
+3. ${temperature >= 70 ? 'WARM: No long sleeves, no sweaters, no ribbed, no heavy fabrics!' : temperature < 50 ? 'COLD (' + temperature + '°F): Add warm outerwear! If dress, MUST include coat/jacket. Prefer long pants for casual. Closed-toe shoes only.' : ''}
 4. Dress = complete outfit (no extra top/bottom)
 5. Only use provided IDs`
         },
@@ -672,7 +775,13 @@ Create ${count} DIFFERENT outfits. Every outfit MUST have shoes!`
         bottoms: selectedItems.filter((i: ClosetItem) => categorizeItem(i) === 'bottom'),
         dresses: selectedItems.filter((i: ClosetItem) => categorizeItem(i) === 'dress'),
         shoes: selectedItems.filter((i: ClosetItem) => categorizeItem(i) === 'shoes'),
-        outerwear: selectedItems.filter((i: ClosetItem) => categorizeItem(i) === 'outerwear')
+        outerwear: selectedItems.filter((i: ClosetItem) => categorizeItem(i) === 'outerwear'),
+        bags: selectedItems.filter((i: ClosetItem) => {
+          const name = (i.name || '').toLowerCase()
+          return name.includes('bag') || name.includes('purse') || name.includes('handbag') ||
+                 name.includes('clutch') || name.includes('tote') || name.includes('satchel') ||
+                 name.includes('crossbody') || name.includes('shoulder bag')
+        })
       }
 
       // Fix: If no shoes, add appropriate ones
@@ -681,37 +790,69 @@ Create ${count} DIFFERENT outfits. Every outfit MUST have shoes!`
         selected.shoes.push(appropriate.shoes[0])
       }
 
+      // Fix: If no bag, add one or suggest new
+      if (selected.bags.length === 0) {
+        if (appropriate.bags.length > 0) {
+          // Add bag from closet
+          validIds.push(appropriate.bags[0].id)
+          selected.bags.push(appropriate.bags[0])
+        } else {
+          // No bags in closet - ensure new_items includes a bag suggestion
+          const hasBagSuggestion = (outfit.new_items || []).some((item: any) => {
+            const desc = (item.description || '').toLowerCase()
+            const cat = (item.category || '').toLowerCase()
+            return desc.includes('bag') || desc.includes('purse') || cat.includes('bag')
+          })
+
+          if (!hasBagSuggestion) {
+            // Add a basic bag suggestion
+            if (!outfit.new_items) outfit.new_items = []
+            outfit.new_items.push({
+              description: `${formalityLevel <= 40 ? 'Casual crossbody bag or tote' : formalityLevel <= 60 ? 'Structured handbag or shoulder bag' : 'Elegant clutch or small handbag'}`,
+              category: 'bag',
+              color: 'neutral (black, tan, or brown)',
+              reasoning: 'A bag is essential to complete any outfit'
+            })
+          }
+        }
+      }
+
       // Fix: If dress outfit, remove tops/bottoms
       if (selected.dresses.length > 0) {
         validIds = [
           selected.dresses[0].id,
           selected.shoes[0]?.id,
+          selected.bags[0]?.id,
           ...(temperature < 60 && selected.outerwear.length > 0 ? [selected.outerwear[0].id] : [])
         ].filter(Boolean) as string[]
       } else {
-        // Fix: Ensure 1 top, 1 bottom, 1 shoes
+        // Fix: Ensure 1 top, 1 bottom, 1 shoes, 1 bag
         const finalIds: string[] = []
-        
+
         if (selected.tops.length > 0) {
           finalIds.push(selected.tops[0].id)
         } else if (appropriate.top.length > 0) {
           finalIds.push(appropriate.top[0].id)
         }
-        
+
         if (selected.bottoms.length > 0) {
           finalIds.push(selected.bottoms[0].id)
         } else if (appropriate.bottom.length > 0) {
           finalIds.push(appropriate.bottom[0].id)
         }
-        
+
         if (selected.shoes.length > 0) {
           finalIds.push(selected.shoes[0].id)
         }
-        
+
+        if (selected.bags.length > 0) {
+          finalIds.push(selected.bags[0].id)
+        }
+
         if (temperature < 60 && selected.outerwear.length > 0) {
           finalIds.push(selected.outerwear[0].id)
         }
-        
+
         validIds = finalIds
       }
 
@@ -738,6 +879,7 @@ Create ${count} DIFFERENT outfits. Every outfit MUST have shoes!`
       }
 
       // Check style/vibe compatibility
+      let itemsWereSwapped = false
       for (let i = 0; i < finalItems.length; i++) {
         for (let j = i + 1; j < finalItems.length; j++) {
           if (doVibesClash(finalItems[i], finalItems[j])) {
@@ -751,17 +893,73 @@ Create ${count} DIFFERENT outfits. Every outfit MUST have shoes!`
                 return !doVibesClash(shoe, otherItem)
               })
               if (betterShoe) {
-                outfit.closet_item_ids = validIds.map((id: string) => 
+                outfit.closet_item_ids = validIds.map((id: string) =>
                   id === finalItems[shoeIndex].id ? betterShoe.id : id
                 )
+                itemsWereSwapped = true
+
+                // Clear descriptions - they're now incorrect after the swap
+                outfit.weather_rationale = ''
+                outfit.style_rationale = ''
               }
             }
           }
         }
       }
 
+      // Mark if items were swapped so we can regenerate descriptions later
+      outfit._itemsWereSwapped = itemsWereSwapped
+
       return outfit
     })
+
+    // Regenerate descriptions for outfits where items were swapped
+    const outfitsNeedingRegen = validatedOutfits.filter((o: any) => o._itemsWereSwapped)
+
+    if (outfitsNeedingRegen.length > 0) {
+      // Regenerate descriptions for swapped outfits
+      for (const outfit of outfitsNeedingRegen) {
+        const itemDetails = (outfit.closet_item_ids || [])
+          .map((id: string) => closetItems.find((item: ClosetItem) => item.id === id))
+          .filter((item: ClosetItem | undefined): item is ClosetItem => item !== undefined)
+
+        const itemList = itemDetails.map((i: ClosetItem) => i.name).join(', ')
+
+        const regenPrompt = `You swapped items to fix a style clash. Please write updated descriptions for this outfit:
+
+Items: ${itemList}
+Occasion: ${occasion}
+Weather: ${temperature}°F
+Formality: ${formalityCat}
+
+Respond with JSON:
+{
+  "weather_rationale": "Why these items work for ${temperature}°F weather",
+  "style_rationale": "Why this outfit fits ${occasion} at ${formalityCat} formality"
+}`
+
+        try {
+          const regenCompletion = await openai.chat.completions.create({
+            model: 'gpt-4o-mini',
+            messages: [
+              { role: 'system', content: 'You are a fashion stylist writing outfit descriptions.' },
+              { role: 'user', content: regenPrompt }
+            ],
+            response_format: { type: 'json_object' },
+            temperature: 0.7,
+          })
+
+          const regenData = JSON.parse(regenCompletion.choices[0]?.message?.content || '{}')
+          outfit.weather_rationale = regenData.weather_rationale || `Perfect for ${temperature}°F weather`
+          outfit.style_rationale = regenData.style_rationale || `Great choice for ${occasion}`
+        } catch (error) {
+          console.error('Failed to regenerate descriptions:', error)
+          // Use fallback descriptions
+          outfit.weather_rationale = `Styled for ${temperature}°F weather`
+          outfit.style_rationale = `Perfect for ${occasion}`
+        }
+      }
+    }
 
     // Enrich with full details
     const enrichedOutfits = validatedOutfits.map((outfit: any, index: number) => {

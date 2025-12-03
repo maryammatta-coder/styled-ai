@@ -190,63 +190,67 @@ export default function OutfitHistoryPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+      <div className="min-h-screen bg-cream flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-blush" />
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
-        <div className="max-w-6xl mx-auto px-4 py-4">
+    <div className="min-h-screen bg-cream">
+      <header className="bg-beige border-b border-taupe/20 sticky top-0 z-10 backdrop-blur-sm bg-beige/90">
+        <div className="max-w-6xl mx-auto px-6 py-6">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-4">
               <button
                 onClick={() => router.push('/dashboard')}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                className="p-2 hover:bg-taupe/20 rounded-full transition-colors"
               >
-                <ArrowLeft className="w-5 h-5" />
+                <ArrowLeft className="w-5 h-5 text-warm-grey" />
               </button>
-              <h1 className="text-xl font-semibold">Outfit History</h1>
-              <span className="text-sm text-gray-500">
-                {filteredOutfits.length} outfits
-              </span>
+              <div>
+                <h1 className="text-2xl font-light tracking-wide text-dark-taupe">OUTFIT HISTORY</h1>
+                <span className="text-xs text-warm-grey tracking-wide">
+                  {filteredOutfits.length} OUTFITS
+                </span>
+              </div>
             </div>
 
             <button
               onClick={() => router.push('/outfits/generate')}
-              className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors"
+              className="flex items-center gap-2 px-6 py-3 bg-blush text-dark-taupe rounded-full hover:bg-blush/80 transition-all shadow-sm"
             >
               <Sparkles className="w-4 h-4" />
-              New Outfit
+              <span className="text-sm tracking-wide">NEW OUTFIT</span>
             </button>
           </div>
 
-          <div className="flex items-center gap-3 mt-4">
+          <div className="flex items-center gap-4 mt-6">
             <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-warm-grey" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search outfits..."
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+                className="w-full pl-11 pr-4 py-3 bg-cream border border-taupe/30 rounded-full text-dark-taupe placeholder-warm-grey focus:outline-none focus:border-blush transition-colors text-sm"
               />
             </div>
 
             <div className="relative">
               <button
                 onClick={() => setShowFilterMenu(!showFilterMenu)}
-                className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                className="flex items-center gap-2 px-5 py-3 border border-taupe/30 bg-cream rounded-full hover:border-blush transition-colors"
               >
-                <Filter className="w-4 h-4" />
-                {filterOptions.find((f) => f.value === filter)?.label}
-                <ChevronDown className="w-4 h-4" />
+                <Filter className="w-4 h-4 text-dark-taupe" />
+                <span className="text-sm text-dark-taupe">
+                  {filterOptions.find((f) => f.value === filter)?.label}
+                </span>
+                <ChevronDown className="w-4 h-4 text-warm-grey" />
               </button>
 
               {showFilterMenu && (
-                <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-20">
+                <div className="absolute right-0 mt-2 w-56 bg-beige border border-taupe/20 rounded-2xl shadow-lg z-20 overflow-hidden">
                   {filterOptions.map((option) => (
                     <button
                       key={option.value}
@@ -254,8 +258,8 @@ export default function OutfitHistoryPage() {
                         setFilter(option.value)
                         setShowFilterMenu(false)
                       }}
-                      className={`w-full px-4 py-2 text-left hover:bg-gray-50 transition-colors ${
-                        filter === option.value ? 'bg-gray-100 font-medium' : ''
+                      className={`w-full px-5 py-3 text-left hover:bg-taupe/20 transition-colors text-sm ${
+                        filter === option.value ? 'bg-blush/30 font-medium text-dark-taupe' : 'text-warm-grey'
                       }`}
                     >
                       {option.label}
@@ -268,27 +272,27 @@ export default function OutfitHistoryPage() {
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-4 py-6">
+      <main className="max-w-6xl mx-auto px-6 py-10">
         {filteredOutfits.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Sparkles className="w-8 h-8 text-gray-400" />
+          <div className="text-center py-20">
+            <div className="w-16 h-16 bg-blush/30 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Sparkles className="w-8 h-8 text-dark-taupe" />
             </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
+            <h3 className="text-xl font-light tracking-wide text-dark-taupe mb-3">
               {filter === 'favorites'
-                ? 'No favorite outfits yet'
-                : 'No outfits found'}
+                ? 'NO FAVORITES YET'
+                : 'NO OUTFITS FOUND'}
             </h3>
-            <p className="text-gray-500 mb-4">
+            <p className="text-warm-grey mb-8">
               {filter === 'favorites'
                 ? 'Heart your favorite outfits to save them here'
                 : 'Generate your first outfit to get started'}
             </p>
             <button
               onClick={() => router.push('/outfits/generate')}
-              className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors"
+              className="px-8 py-4 bg-blush text-dark-taupe rounded-full hover:bg-blush/80 transition-all shadow-sm tracking-wide"
             >
-              Generate Outfit
+              GENERATE OUTFIT
             </button>
           </div>
         ) : (
@@ -352,26 +356,26 @@ function OutfitCard({
   })
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
+    <div className="bg-beige rounded-3xl border border-taupe/10 overflow-hidden hover:shadow-lg transition-all group">
       <div
         onClick={onClick}
-        className="aspect-square bg-gray-100 relative cursor-pointer"
+        className="aspect-[4/5] bg-cream relative cursor-pointer"
       >
         {previewItems.length > 0 ? (
-          <div className="grid grid-cols-2 h-full">
+          <div className="grid grid-cols-2 h-full gap-0.5">
             {previewItems.map((item, idx) => (
-              <div key={idx} className="relative bg-gray-100">
+              <div key={idx} className="relative bg-cream">
                 <Image
                   src={item.image_url}
                   alt={item.name || ''}
                   fill
                   className="object-cover"
                 />
-                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-2">
-                  <p className="text-white text-xs font-medium truncate">
+                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-dark-taupe/80 to-transparent p-3">
+                  <p className="text-cream text-xs font-medium truncate">
                     {item.name || 'Item'}
                   </p>
-                  <p className="text-white/70 text-xs capitalize">
+                  <p className="text-cream/70 text-xs capitalize">
                     {item.category || ''}
                   </p>
                 </div>
@@ -379,29 +383,29 @@ function OutfitCard({
             ))}
             {previewItems.length < 4 &&
               Array.from({ length: 4 - previewItems.length }).map((_, idx) => (
-                <div key={`empty-${idx}`} className="bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
-                  <Sparkles className="w-6 h-6 text-gray-300" />
+                <div key={`empty-${idx}`} className="bg-gradient-to-br from-cream to-beige flex items-center justify-center">
+                  <Sparkles className="w-6 h-6 text-taupe" />
                 </div>
               ))}
           </div>
         ) : (
           <div className="flex items-center justify-center h-full">
-            <Sparkles className="w-12 h-12 text-gray-300" />
+            <Sparkles className="w-12 h-12 text-taupe" />
           </div>
         )}
 
         {outfit.outfit_data?.new_items?.length > 0 && (
-          <div className="absolute top-2 left-2 px-2 py-1 bg-purple-100 text-purple-700 text-xs font-medium rounded-full">
-            +{outfit.outfit_data.new_items.length} new items
+          <div className="absolute top-3 left-3 px-3 py-1.5 bg-blush/90 backdrop-blur-sm text-dark-taupe text-xs font-medium rounded-full">
+            +{outfit.outfit_data.new_items.length} NEW
           </div>
         )}
       </div>
 
-      <div className="p-4">
-        <div className="flex items-start justify-between mb-2">
+      <div className="p-5">
+        <div className="flex items-start justify-between mb-3">
           <div className="flex-1 min-w-0">
-            <h3 className="font-medium text-gray-900 truncate">{outfit.label}</h3>
-            <div className="flex items-center gap-2 text-sm text-gray-500">
+            <h3 className="font-medium text-dark-taupe truncate">{outfit.label}</h3>
+            <div className="flex items-center gap-2 text-xs text-warm-grey mt-1">
               <span>{outfit.context_type}</span>
               <span>•</span>
               <span>{date}</span>
@@ -414,13 +418,13 @@ function OutfitCard({
                 e.stopPropagation()
                 onToggleFavorite()
               }}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              className="p-2 hover:bg-taupe/20 rounded-full transition-colors"
             >
               <Heart
                 className={`w-5 h-5 ${
                   outfit.is_favorite
-                    ? 'fill-red-500 text-red-500'
-                    : 'text-gray-400'
+                    ? 'fill-blush text-blush'
+                    : 'text-taupe'
                 }`}
               />
             </button>
@@ -431,20 +435,20 @@ function OutfitCard({
                   e.stopPropagation()
                   setShowMenu(!showMenu)
                 }}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                className="p-2 hover:bg-taupe/20 rounded-full transition-colors"
               >
-                <MoreVertical className="w-5 h-5 text-gray-400" />
+                <MoreVertical className="w-5 h-5 text-warm-grey" />
               </button>
 
               {showMenu && (
-                <div className="absolute right-0 mt-1 w-32 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
+                <div className="absolute right-0 mt-1 w-36 bg-beige border border-taupe/20 rounded-2xl shadow-lg z-10 overflow-hidden">
                   <button
                     onClick={(e) => {
                       e.stopPropagation()
                       onDelete()
                       setShowMenu(false)
                     }}
-                    className="w-full px-3 py-2 text-left text-red-600 hover:bg-red-50 flex items-center gap-2"
+                    className="w-full px-4 py-3 text-left text-dark-taupe hover:bg-taupe/20 flex items-center gap-2 text-sm"
                   >
                     <Trash2 className="w-4 h-4" />
                     Delete
@@ -456,7 +460,7 @@ function OutfitCard({
         </div>
 
         {outfit.outfit_data?.weather && (
-          <div className="flex items-center gap-1 text-sm text-gray-500">
+          <div className="flex items-center gap-2 text-xs text-warm-grey">
             <Cloud className="w-4 h-4" />
             <span>
               {outfit.outfit_data.weather.temperature}°F, {outfit.outfit_data.weather.city}
@@ -537,7 +541,7 @@ function OutfitDetailModal({
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {closetItems.map((item) => (
                   <div key={item.id} className="bg-gray-50 rounded-lg overflow-hidden">
-                    <div className="aspect-square relative">
+                    <div className="aspect-[4/5] relative">
                       <Image
                         src={item.image_url}
                         alt={item.name}

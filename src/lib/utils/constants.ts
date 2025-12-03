@@ -1,12 +1,16 @@
 export const STYLE_VIBES = [
-  'Elevated Basics',
-  'Resort',
   'Minimalist',
-  'Chic',
-  'Edgy',
-  'Bohemian',
-  'Professional',
+  'Classic/Timeless',
+  'Parisian Chic',
+  'Coastal Grandmother',
+  'Old Money',
   'Streetwear',
+  'Grunge',
+  'Y2K',
+  'Cottagecore',
+  'Dark Academia',
+  'Boho/Bohemian',
+  'Romantic',
 ] as const
 
 export const COLOR_OPTIONS = [
@@ -26,11 +30,15 @@ export const COLOR_OPTIONS = [
 
 export const OCCASIONS = [
   'Date Night',
-  'Work Meeting',
+  'Business',
   'Brunch',
-  'Girls Night',
+  'Girls Night Out',
   'Casual Day Out',
-  'Travel Day',
-  'Wedding',
+  'Dinner',
+  'Sports Event',
+  'Concert',
+  'Errands',
   'Beach Day',
+  'Formal Event',
+  'Party',
 ] as const

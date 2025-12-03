@@ -3,17 +3,18 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { 
-  ArrowLeft, 
-  Calendar, 
-  MapPin, 
-  Clock, 
-  Sparkles, 
+import {
+  ArrowLeft,
+  Calendar,
+  MapPin,
+  Clock,
+  Sparkles,
   Loader2,
   RefreshCw,
   AlertCircle,
   X,
-  Heart
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react'
 
 interface CalendarEvent {
@@ -33,14 +34,25 @@ export default function CalendarPage() {
   const [generatingOutfit, setGeneratingOutfit] = useState<string | null>(null)
   const [showOutfitOptions, setShowOutfitOptions] = useState<CalendarEvent | null>(null)
   const [selectedItemSource, setSelectedItemSource] = useState<'closet' | 'mix' | 'new'>('mix')
-  const [generatedOutfit, setGeneratedOutfit] = useState<any>(null)
-  const [showGeneratedOutfitModal, setShowGeneratedOutfitModal] = useState(false)
+  const [formalityLevel, setFormalityLevel] = useState(50)
+  const [generatedOutfits, setGeneratedOutfits] = useState<any[]>([])
+  const [currentOutfitIndex, setCurrentOutfitIndex] = useState(0)
+  const [showResultsModal, setShowResultsModal] = useState(false)
+  const [savingOutfit, setSavingOutfit] = useState(false)
   const router = useRouter()
   const supabase = createClient()
 
   useEffect(() => {
     fetchEvents()
   }, [])
+
+  const getFormalityLabel = (value: number) => {
+    if (value <= 20) return 'Very Casual'
+    if (value <= 40) return 'Casual'
+    if (value <= 60) return 'Smart Casual'
+    if (value <= 80) return 'Dressy'
+    return 'Formal'
+  }
 
   const fetchEvents = async () => {
     setLoading(true)
@@ -66,32 +78,70 @@ export default function CalendarPage() {
   const detectOccasion = (event: CalendarEvent): string => {
     const text = `${event.title} ${event.description} ${event.location}`.toLowerCase()
 
-    if (text.includes('interview') || text.includes('meeting') || text.includes('presentation')) {
-      return 'Work Meeting'
-    }
-    if (text.includes('date') || text.includes('dinner') || text.includes('restaurant')) {
-      return 'Date Night'
-    }
-    if (text.includes('brunch') || text.includes('breakfast') || text.includes('lunch')) {
-      return 'Brunch'
-    }
-    if (text.includes('party') || text.includes('celebration') || text.includes('birthday')) {
-      return 'Party'
-    }
-    if (text.includes('wedding') || text.includes('ceremony')) {
-      return 'Wedding'
-    }
-    if (text.includes('gym') || text.includes('workout') || text.includes('yoga') || text.includes('fitness')) {
-      return 'Workout'
-    }
-    if (text.includes('travel') || text.includes('flight') || text.includes('airport') || text.includes('trip')) {
-      return 'Travel'
-    }
-    if (text.includes('casual') || text.includes('hangout') || text.includes('coffee')) {
-      return 'Casual Outing'
+    // Business/Work
+    if (text.includes('interview') || text.includes('meeting') || text.includes('presentation') ||
+        text.includes('conference') || text.includes('work') || text.includes('business')) {
+      return 'Business'
     }
 
-    return 'General Event'
+    // Brunch
+    if (text.includes('brunch') || text.includes('breakfast')) {
+      return 'Brunch'
+    }
+
+    // Dinner (check before Date Night to properly categorize family dinners, thanksgiving, etc)
+    if (text.includes('dinner') || text.includes('thanksgiving') || text.includes('supper')) {
+      return 'Dinner'
+    }
+
+    // Date Night
+    if (text.includes('date') || text.includes('romantic') || text.includes('anniversary')) {
+      return 'Date Night'
+    }
+
+    // Girls Night Out
+    if (text.includes('girls') || text.includes('ladies night') || text.includes('girls night')) {
+      return 'Girls Night Out'
+    }
+
+    // Sports Event
+    if (text.includes('game') || text.includes('match') || text.includes('sports') ||
+        text.includes('football') || text.includes('basketball') || text.includes('baseball') ||
+        text.includes('soccer') || text.includes('hockey') || text.includes('stadium')) {
+      return 'Sports Event'
+    }
+
+    // Concert
+    if (text.includes('concert') || text.includes('show') || text.includes('music') ||
+        text.includes('festival') || text.includes('performance')) {
+      return 'Concert'
+    }
+
+    // Errands
+    if (text.includes('errand') || text.includes('grocery') || text.includes('shopping') ||
+        text.includes('appointment') || text.includes('pickup') || text.includes('dentist') ||
+        text.includes('doctor') || text.includes('bank')) {
+      return 'Errands'
+    }
+
+    // Travel Day
+    if (text.includes('travel') || text.includes('flight') || text.includes('airport') ||
+        text.includes('trip') || text.includes('vacation')) {
+      return 'Travel Day'
+    }
+
+    // Beach Day
+    if (text.includes('beach') || text.includes('pool') || text.includes('swim')) {
+      return 'Beach Day'
+    }
+
+    // Casual Day Out
+    if (text.includes('casual') || text.includes('hangout') || text.includes('coffee') ||
+        text.includes('lunch') || text.includes('walk') || text.includes('park')) {
+      return 'Casual Day Out'
+    }
+
+    return 'Casual Day Out'
   }
 
 // Detect destination city from event details
@@ -205,7 +255,38 @@ const detectDestination = (event: CalendarEvent): string | null => {
   return null
 }
 
-  const generateOutfitForEvent = async (event: CalendarEvent, itemSource: 'closet' | 'mix' | 'new') => {
+  const saveSelectedOutfit = async () => {
+    if (generatedOutfits.length === 0) return
+
+    setSavingOutfit(true)
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Not authenticated')
+
+      const selectedOutfit = generatedOutfits[currentOutfitIndex]
+
+      const { error } = await supabase
+        .from('outfits')
+        .insert({
+          user_id: user.id,
+          label: selectedOutfit.label,
+          context_type: selectedOutfit.context_type || 'Event',
+          date: new Date().toISOString().split('T')[0],
+          outfit_data: selectedOutfit.outfit_data,
+        })
+
+      if (error) throw error
+
+      router.push('/outfits/history')
+    } catch (error: any) {
+      console.error(error)
+      alert('Failed to save outfit: ' + error.message)
+    } finally {
+      setSavingOutfit(false)
+    }
+  }
+
+  const generateOutfitForEvent = async (event: CalendarEvent, itemSource: 'closet' | 'mix' | 'new', formality: number) => {
     setGeneratingOutfit(event.id)
 
     try {
@@ -219,7 +300,7 @@ const detectDestination = (event: CalendarEvent): string | null => {
       const destination = detectDestination(event)
       console.log('Detected destination:', destination)
       console.log('Event details:', event.title, event.description, event.location)
-      
+
       // Fetch weather for destination if detected
       let weatherData = null
       if (destination) {
@@ -238,13 +319,15 @@ const detectDestination = (event: CalendarEvent): string | null => {
         }
       }
 
-      const response = await fetch('/api/outfits/generate', {
+      const response = await fetch('/api/outfits/generate-multiple', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userId: user.id,
           occasion: occasion,
           itemSource: itemSource,
+          formalityLevel: formality,
+          count: 3,
           eventContext: {
             title: event.title,
             location: event.location || destination,
@@ -257,19 +340,22 @@ const detectDestination = (event: CalendarEvent): string | null => {
 
       const data = await response.json()
 
-      if (data.success && data.outfit) {
-        // Show the generated outfit in a modal
-        setGeneratedOutfit(data.outfit)
-        setShowGeneratedOutfitModal(true)
+      if (data.success && data.outfits && data.outfits.length > 0) {
+        // Show results in modal
+        setGeneratedOutfits(data.outfits)
+        setCurrentOutfitIndex(0)
+        setShowResultsModal(true)
+        setShowOutfitOptions(null) // Close the options modal
       } else {
-        alert('Failed to generate outfit: ' + (data.error || 'Unknown error'))
+        alert('Failed to generate outfits: ' + (data.error || 'Unknown error'))
       }
     } catch (err) {
-      alert('Failed to generate outfit')
+      alert('Failed to generate outfits')
     } finally {
       setGeneratingOutfit(null)
     }
   }
+
 
   const formatEventTime = (start: string, end: string, isAllDay: boolean) => {
     if (isAllDay) {
@@ -509,6 +595,35 @@ const detectDestination = (event: CalendarEvent): string | null => {
                 </button>
               </div>
 
+              {/* Formality Slider */}
+              <div className="mb-6">
+                <div className="flex justify-between items-center mb-3">
+                  <h3 className="text-lg font-semibold text-gray-800">Dress Code</h3>
+                  <span className="text-sm font-medium text-rose-500 bg-rose-50 px-3 py-1 rounded-full">
+                    {getFormalityLabel(formalityLevel)}
+                  </span>
+                </div>
+
+                <div className="relative">
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={formalityLevel}
+                    onChange={(e) => setFormalityLevel(Number(e.target.value))}
+                    className="w-full h-3 rounded-lg appearance-none cursor-pointer"
+                    style={{
+                      background: `linear-gradient(to right, #93c5fd 0%, #c4b5fd 50%, #fbcfe8 100%)`
+                    }}
+                  />
+                  <div className="flex justify-between text-xs text-gray-500 mt-2">
+                    <span>Casual</span>
+                    <span>Smart Casual</span>
+                    <span>Formal</span>
+                  </div>
+                </div>
+              </div>
+
               <div className="flex gap-3">
                 <button
                   onClick={() => setShowOutfitOptions(null)}
@@ -520,7 +635,7 @@ const detectDestination = (event: CalendarEvent): string | null => {
                   onClick={() => {
                     const event = showOutfitOptions
                     setShowOutfitOptions(null)
-                    generateOutfitForEvent(event, selectedItemSource)
+                    generateOutfitForEvent(event, selectedItemSource, formalityLevel)
                   }}
                   disabled={generatingOutfit !== null}
                   className="flex-1 px-4 py-3 bg-gradient-to-r from-rose-500 to-teal-500 text-white rounded-xl hover:opacity-90 transition disabled:opacity-50 flex items-center justify-center gap-2"
@@ -541,130 +656,152 @@ const detectDestination = (event: CalendarEvent): string | null => {
             </div>
           </div>
         )}
-        {/* Generated Outfit Modal */}
-        {showGeneratedOutfitModal && generatedOutfit && (
+
+        {/* Results Modal with 3 Outfit Options */}
+        {showResultsModal && generatedOutfits.length > 0 && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
             <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
               {/* Header */}
-              <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between">
-                <h2 className="text-xl font-semibold">{generatedOutfit.outfit_name || 'Your Outfit'}</h2>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => {
-                      // TODO: Add to favorites
-                    }}
-                    className="p-2 hover:bg-gray-100 rounded-full"
-                  >
-                    <Heart className="w-5 h-5" />
-                  </button>
-                  <button
-                    onClick={() => setShowGeneratedOutfitModal(false)}
-                    className="p-2 hover:bg-gray-100 rounded-full"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
+              <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between z-10">
+                <div>
+                  <h2 className="text-xl font-semibold">Your Outfit Options</h2>
+                  <p className="text-sm text-gray-500">Pick your favorite ({currentOutfitIndex + 1} of {generatedOutfits.length})</p>
                 </div>
+                <button
+                  onClick={() => setShowResultsModal(false)}
+                  className="p-2 hover:bg-gray-100 rounded-full"
+                >
+                  <X className="w-5 h-5" />
+                </button>
               </div>
 
               <div className="p-6">
-                {/* Tags */}
-                <div className="flex flex-wrap gap-2 mb-6">
-                  <span className="px-3 py-1 bg-gray-100 rounded-full text-sm">
-                    {generatedOutfit.occasion}
-                  </span>
-                  {generatedOutfit.weather && (
-                    <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm">
-                      ☁️ {generatedOutfit.weather.temperature}°F in {generatedOutfit.weather.city}
+                {/* Navigation */}
+                {generatedOutfits.length > 1 && (
+                  <div className="flex items-center justify-center gap-4 mb-6">
+                    <button
+                      onClick={() => setCurrentOutfitIndex(Math.max(0, currentOutfitIndex - 1))}
+                      disabled={currentOutfitIndex === 0}
+                      className="p-2 rounded-full hover:bg-gray-100 disabled:opacity-30 disabled:hover:bg-transparent"
+                    >
+                      <ChevronLeft className="w-6 h-6" />
+                    </button>
+                    <span className="text-sm font-medium px-4 py-2 bg-gray-100 rounded-full">
+                      Option {currentOutfitIndex + 1}
                     </span>
-                  )}
-                </div>
+                    <button
+                      onClick={() => setCurrentOutfitIndex(Math.min(generatedOutfits.length - 1, currentOutfitIndex + 1))}
+                      disabled={currentOutfitIndex === generatedOutfits.length - 1}
+                      className="p-2 rounded-full hover:bg-gray-100 disabled:opacity-30 disabled:hover:bg-transparent"
+                    >
+                      <ChevronRight className="w-6 h-6" />
+                    </button>
+                  </div>
+                )}
 
-                {/* Closet Items */}
-                {generatedOutfit.outfit_data?.closet_items?.length > 0 && (
-                  <div className="mb-6">
-                    <h3 className="font-medium text-gray-700 mb-3">From Your Closet:</h3>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                      {generatedOutfit.outfit_data.closet_items.map((item: any) => (
-                        <div key={item.id} className="text-center">
-                          <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden mb-2">
-                            <img
-                              src={item.image_url}
-                              alt={item.name}
-                              className="w-full h-full object-cover"
-                            />
+                {/* Current Outfit */}
+                {(() => {
+                  const outfit = generatedOutfits[currentOutfitIndex]
+                  if (!outfit) return null
+
+                  return (
+                    <>
+                      {/* Closet Items */}
+                      {outfit.outfit_data?.closet_items?.length > 0 && (
+                        <div className="mb-6">
+                          <h3 className="font-medium text-gray-700 mb-3">From Your Closet:</h3>
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                            {outfit.outfit_data.closet_items.map((item: any) => (
+                              <div key={item.id} className="text-center">
+                                <div className="aspect-[4/5] bg-gray-100 rounded-lg overflow-hidden mb-2">
+                                  <img
+                                    src={item.image_url}
+                                    alt={item.name}
+                                    className="w-full h-full object-cover"
+                                  />
+                                </div>
+                                <p className="text-sm font-medium truncate">{item.name}</p>
+                                <p className="text-xs text-gray-500 capitalize">{item.category}</p>
+                              </div>
+                            ))}
                           </div>
-                          <p className="text-sm font-medium truncate">{item.name}</p>
-                          <p className="text-xs text-gray-500 capitalize">{item.category}</p>
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                      )}
 
-                {/* New Items */}
-                {generatedOutfit.outfit_data?.new_items?.length > 0 && (
-                  <div className="mb-6">
-                    <h3 className="font-medium text-rose-600 mb-3">✨ Suggested New Items:</h3>
-                    <div className="space-y-3">
-                      {generatedOutfit.outfit_data.new_items.map((item: any, idx: number) => (
-                        <div key={idx} className="p-4 bg-rose-50 rounded-xl border border-rose-100">
-                          <p className="font-medium">{item.description}</p>
-                          <p className="text-sm text-gray-600">{item.category} • {item.color}</p>
-                          {item.estimated_price && (
-                            <p className="text-sm text-rose-600 mt-1">{item.estimated_price}</p>
-                          )}
+                      {/* New Items */}
+                      {outfit.outfit_data?.new_items?.length > 0 && (
+                        <div className="mb-6">
+                          <h3 className="font-medium text-rose-600 mb-3">✨ Suggested New Items:</h3>
+                          <div className="space-y-3">
+                            {outfit.outfit_data.new_items.map((item: any, idx: number) => (
+                              <div key={idx} className="p-4 bg-rose-50 rounded-xl border border-rose-100">
+                                <p className="font-medium">{item.description}</p>
+                                <p className="text-sm text-gray-600">{item.category} • {item.color}</p>
+                                {item.estimated_price && (
+                                  <p className="text-sm text-rose-600 mt-1">{item.estimated_price}</p>
+                                )}
+                              </div>
+                            ))}
+                          </div>
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                      )}
 
-                {/* Weather Rationale */}
-                {generatedOutfit.outfit_data?.weather_rationale && (
-                  <div className="p-4 bg-blue-50 rounded-xl mb-4">
-                    <p className="text-sm text-blue-800">
-                      🌤️ {generatedOutfit.outfit_data.weather_rationale}
-                    </p>
-                  </div>
-                )}
+                      {/* Rationale */}
+                      {outfit.outfit_data?.weather_rationale && (
+                        <div className="p-4 bg-blue-50 rounded-xl mb-4">
+                          <p className="text-sm text-blue-800">
+                            🌤️ {outfit.outfit_data.weather_rationale}
+                          </p>
+                        </div>
+                      )}
 
-                {/* Style Rationale */}
-                {generatedOutfit.outfit_data?.style_rationale && (
-                  <div className="p-4 bg-purple-50 rounded-xl mb-4">
-                    <p className="text-sm text-purple-800">
-                      ✨ {generatedOutfit.outfit_data.style_rationale}
-                    </p>
-                  </div>
-                )}
+                      {outfit.outfit_data?.style_rationale && (
+                        <div className="p-4 bg-purple-50 rounded-xl mb-4">
+                          <p className="text-sm text-purple-800">
+                            ✨ {outfit.outfit_data.style_rationale}
+                          </p>
+                        </div>
+                      )}
 
-                {/* Styling Tips */}
-                {generatedOutfit.outfit_data?.styling_tips?.length > 0 && (
-                  <div className="mb-6">
-                    <h3 className="font-medium mb-2">Styling Tips:</h3>
-                    <ul className="text-sm text-gray-600 space-y-1">
-                      {generatedOutfit.outfit_data.styling_tips.map((tip: string, idx: number) => (
-                        <li key={idx}>• {tip}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
+                      {/* Styling Tips */}
+                      {outfit.outfit_data?.styling_tips?.length > 0 && (
+                        <div className="mb-6">
+                          <h3 className="font-medium mb-2">Styling Tips:</h3>
+                          <ul className="text-sm text-gray-600 space-y-1">
+                            {outfit.outfit_data.styling_tips.map((tip: string, idx: number) => (
+                              <li key={idx}>• {tip}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </>
+                  )
+                })()}
 
                 {/* Actions */}
-                <div className="flex gap-3">
+                <div className="space-y-3 mt-6">
                   <button
-                    onClick={() => {
-                      setShowGeneratedOutfitModal(false)
-                      router.push('/outfits/history')
-                    }}
-                    className="flex-1 px-4 py-3 bg-gray-100 rounded-xl hover:bg-gray-200 transition"
+                    onClick={saveSelectedOutfit}
+                    disabled={savingOutfit}
+                    className="w-full px-4 py-3 bg-gradient-to-r from-rose-500 to-teal-500 text-white rounded-xl hover:opacity-90 transition disabled:opacity-50 flex items-center justify-center gap-2"
                   >
-                    View All Outfits
+                    {savingOutfit ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-5 h-5" />
+                        Save This Outfit
+                      </>
+                    )}
                   </button>
                   <button
-                    onClick={() => setShowGeneratedOutfitModal(false)}
-                    className="flex-1 px-4 py-3 bg-gradient-to-r from-rose-500 to-teal-500 text-white rounded-xl hover:opacity-90 transition"
+                    onClick={() => setShowResultsModal(false)}
+                    className="w-full px-4 py-3 bg-gray-100 rounded-xl hover:bg-gray-200 transition"
                   >
-                    Done
+                    Keep Looking
                   </button>
                 </div>
               </div>

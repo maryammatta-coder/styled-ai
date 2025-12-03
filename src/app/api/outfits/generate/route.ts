@@ -36,26 +36,46 @@ function getWeatherCategory(temp: number): 'hot' | 'warm' | 'mild' | 'cool' | 'c
 
 function getFormalityFromOccasion(occasion: string): number {
   const lower = occasion.toLowerCase()
-  
+
   // Formal occasions
-  if (lower.includes('wedding') || lower.includes('gala') || lower.includes('formal') ||
+  if (lower.includes('gala') || lower.includes('formal') ||
       lower.includes('black tie') || lower.includes('cocktail')) {
     return 85
   }
-  
+
   // Dressy occasions
   if (lower.includes('date night') || lower.includes('dinner') || lower.includes('party') ||
-      lower.includes('anniversary') || lower.includes('birthday')) {
+      lower.includes('anniversary') || lower.includes('birthday') || lower.includes('girls night out')) {
     return 70
   }
-  
-  // Smart casual
-  if (lower.includes('brunch') || lower.includes('lunch') || lower.includes('meeting') ||
-      lower.includes('interview') || lower.includes('work')) {
+
+  // Business/Smart casual
+  if (lower.includes('business') || lower.includes('brunch') || lower.includes('lunch') ||
+      lower.includes('meeting') || lower.includes('interview') || lower.includes('work')) {
     return 55
   }
-  
-  // Casual
+
+  // Concert/events
+  if (lower.includes('concert') || lower.includes('show')) {
+    return 50
+  }
+
+  // Casual day out
+  if (lower.includes('casual day out') || lower.includes('casual outing')) {
+    return 30
+  }
+
+  // Sports/errands - very casual
+  if (lower.includes('sports event') || lower.includes('errands') || lower.includes('grocery')) {
+    return 25
+  }
+
+  // Travel or beach
+  if (lower.includes('travel') || lower.includes('beach') || lower.includes('flight')) {
+    return 25
+  }
+
+  // Default casual
   return 35
 }
 
@@ -131,8 +151,9 @@ function isWeatherAppropriate(item: ClosetItem, temp: number): boolean {
 function isShoeAppropriateForFormality(item: ClosetItem, formalityLevel: number): boolean {
   const name = (item.name || '').toLowerCase()
   const formality = getFormalityCategory(formalityLevel)
-  
+
   if (formality === 'casual') {
+    // Casual: no dressy heels
     if (name.includes('stiletto') || name.includes('pump')) return false
     if (name.includes('strappy') && name.includes('heel')) return false
     if (name.includes('wedge')) return false
@@ -141,14 +162,27 @@ function isShoeAppropriateForFormality(item: ClosetItem, formalityLevel: number)
       return false
     }
   }
-  
-  if (formality === 'formal') {
+
+  // Smart casual: filter out nighttime/party heels but allow daytime dressy shoes
+  if (formality === 'smartCasual') {
+    // Filter out sparkly/glittery/nighttime heels
+    if (name.includes('sparkle') || name.includes('sparkly')) return false
+    if (name.includes('glitter') || name.includes('glittery')) return false
+    if (name.includes('rhinestone') || name.includes('crystal')) return false
+    if (name.includes('strappy') && name.includes('heel')) return false  // Strappy heels are too nighttime
+    if (name.includes('stiletto')) return false  // Stilettos are too formal/nighttime
+    if (name.includes('combat')) return false  // Combat boots are too casual
+    // Allow: wedges, kitten heels, block heels, mules, slingbacks, loafers, clean sneakers, ankle boots, flats
+  }
+
+  if (formality === 'formal' || formality === 'dressy') {
+    // Formal: no casual shoes
     if (name.includes('sneaker')) return false
     if (name.includes('flat') && !name.includes('ballet')) return false
     if (name.includes('loafer')) return false
     if (name.includes('combat')) return false
   }
-  
+
   return true
 }
 
@@ -156,7 +190,7 @@ function isItemAppropriateForFormality(item: ClosetItem, formalityLevel: number)
   const name = (item.name || '').toLowerCase()
   const category = categorizeItem(item)
   const formality = getFormalityCategory(formalityLevel)
-  
+
   // For CASUAL, reject very dressy items
   if (formality === 'casual') {
     if (name.includes('drape') || name.includes('draped')) return false
@@ -166,7 +200,34 @@ function isItemAppropriateForFormality(item: ClosetItem, formalityLevel: number)
     if (name.includes('cocktail') || name.includes('formal') || name.includes('evening')) return false
     if (name.includes('halter') && !name.includes('casual')) return false
   }
-  
+
+  // For SMART CASUAL, reject items that are TOO formal
+  // But allow mixing casual and dressy pieces
+  if (formality === 'smartCasual') {
+    // FIRST: Block ALL maxi dresses regardless of category detection
+    if (name.includes('maxi')) return false
+
+    // Reject fancy formal dresses
+    if (category === 'dress') {
+      if (name.includes('gown')) return false
+      if (name.includes('cocktail')) return false
+      if (name.includes('evening')) return false
+      if (name.includes('sequin') || name.includes('sparkle')) return false
+      if (name.includes('satin') && !name.includes('midi') && !name.includes('mini')) return false
+    }
+    // Reject formal tops and items
+    if (name.includes('sequin') || name.includes('sparkle')) return false
+    if (name.includes('formal') || name.includes('evening')) return false
+    if (name.includes('cocktail')) return false
+  }
+
+  // For DRESSY, reject very casual items
+  if (formality === 'dressy') {
+    if (name.includes('t-shirt') || name.includes('tee ')) return false
+    if (name.includes('athletic') || name.includes('sports')) return false
+    if (name.includes('hoodie') || name.includes('sweatshirt')) return false
+  }
+
   // For FORMAL, reject very casual items
   if (formality === 'formal') {
     if (name.includes('t-shirt') || name.includes('tee ')) return false
@@ -175,7 +236,7 @@ function isItemAppropriateForFormality(item: ClosetItem, formalityLevel: number)
     if (name.includes('hoodie') || name.includes('sweatshirt')) return false
     if (name.includes('denim') && category === 'bottom') return false
   }
-  
+
   return true
 }
 
@@ -225,7 +286,7 @@ function doVibesClash(item1: ClosetItem, item2: ClosetItem): boolean {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { userId, occasion, itemSource = 'closet', weather, destination, eventContext } = body
+    const { userId, occasion, itemSource = 'closet', weather, destination, eventContext, formalityLevel: providedFormality } = body
 
     if (!userId) {
       return NextResponse.json({ success: false, error: 'User ID required' }, { status: 400 })
@@ -244,7 +305,7 @@ export async function POST(request: NextRequest) {
     // Get weather
     let temperature = 72
     let weatherCity = destination || user.home_city || 'Unknown'
-    
+
     if (weather?.temperature) {
       temperature = weather.temperature
       weatherCity = weather.city || weatherCity
@@ -262,7 +323,8 @@ export async function POST(request: NextRequest) {
     }
 
     const weatherCat = getWeatherCategory(temperature)
-    const formalityLevel = getFormalityFromOccasion(occasion)
+    // Use provided formality level if available, otherwise infer from occasion
+    const formalityLevel = providedFormality !== undefined ? providedFormality : getFormalityFromOccasion(occasion)
     const formalityCat = getFormalityCategory(formalityLevel)
 
     // Filter items for weather and formality
@@ -299,8 +361,10 @@ export async function POST(request: NextRequest) {
       outfitGuidance = 'For formal: Pick an elegant DRESS + HEELS'
     } else if (formalityCat === 'dressy') {
       outfitGuidance = 'For dressy: Pick a nice DRESS + HEELS, or TOP + DRESSY PANTS + HEELS'
+    } else if (formalityCat === 'smartCasual') {
+      outfitGuidance = 'For smart casual: MUST MIX casual and elevated pieces. Examples: casual top + dressy pants + heels, OR dressy top + jeans + heels, OR mini dress + sneakers. NEVER all casual (tank+shorts+sneakers) or all dressy.'
     } else {
-      outfitGuidance = 'Pick a TOP + BOTTOM + COMFORTABLE SHOES'
+      outfitGuidance = 'For casual: Pick a TOP + BOTTOM + COMFORTABLE SHOES (sneakers, flats, loafers)'
     }
 
     const prompt = `You are a fashion stylist creating ONE perfect outfit.
@@ -366,8 +430,9 @@ IMPORTANT: In weather_rationale and style_rationale, describe the ACTUAL items y
 1. Pick exactly 1 top + 1 bottom + 1 shoes, OR 1 dress + 1 shoes
 2. NEVER pick 2 tops
 3. ${temperature < 50 ? 'COLD WEATHER: Add warm outerwear, no sleeveless/tanks' : temperature >= 70 ? 'WARM: No long sleeves, no sweaters' : ''}
-4. Your rationale must describe the items you actually picked, not different ones
-5. Only use IDs provided in the lists`
+4. ${formalityCat === 'smartCasual' ? 'SMART CASUAL: MIX casual and dressy pieces. Example: jeans + nice top + heels, or casual top + nice pants + dressy shoes. Balance casual with elevated.' : ''}
+5. Your rationale must describe the items you actually picked, not different ones
+6. Only use IDs provided in the lists`
         },
         { role: 'user', content: prompt }
       ],
@@ -494,8 +559,9 @@ IMPORTANT: In weather_rationale and style_rationale, describe the ACTUAL items y
       .from('outfits')
       .insert({
         user_id: userId,
-        outfit_name: outfitData.outfit_name || 'Generated Outfit',
-        occasion: occasion,
+        label: outfitData.outfit_name || 'Generated Outfit',
+        context_type: occasion,
+        date: eventContext?.time || new Date().toISOString(),
         outfit_data: {
           closet_items: closetItemDetails,
           closet_item_ids: validIds,
@@ -503,41 +569,28 @@ IMPORTANT: In weather_rationale and style_rationale, describe the ACTUAL items y
           weather_rationale: outfitData.weather_rationale || '',
           style_rationale: outfitData.style_rationale || '',
           styling_tips: outfitData.styling_tips || [],
-        },
-        weather: {
-          temperature: temperature,
-          city: weatherCity,
-          condition: weather?.condition || 'Unknown'
+          weather: {
+            temperature: temperature,
+            city: weatherCity,
+            condition: weather?.condition || 'Unknown'
+          }
         },
         is_favorite: false,
       })
       .select()
       .single()
 
-    if (saveError) {
+    if (saveError || !savedOutfit) {
       console.error('Failed to save outfit:', saveError)
+      return NextResponse.json({
+        success: false,
+        error: 'Failed to save outfit: ' + (saveError?.message || 'Unknown error')
+      }, { status: 500 })
     }
 
     return NextResponse.json({
       success: true,
-      outfit: {
-        id: savedOutfit?.id || `temp-${Date.now()}`,
-        outfit_name: outfitData.outfit_name || 'Generated Outfit',
-        occasion: occasion,
-        outfit_data: {
-          closet_items: closetItemDetails,
-          closet_item_ids: validIds,
-          new_items: itemSource === 'closet' ? [] : (outfitData.new_items || []),
-          weather_rationale: outfitData.weather_rationale || '',
-          style_rationale: outfitData.style_rationale || '',
-          styling_tips: outfitData.styling_tips || [],
-        },
-        weather: {
-          temperature: temperature,
-          city: weatherCity,
-          condition: weather?.condition || 'Unknown'
-        },
-      }
+      outfit: savedOutfit
     })
   } catch (error) {
     console.error('Outfit generation error:', error)

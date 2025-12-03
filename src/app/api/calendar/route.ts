@@ -4,10 +4,10 @@ import { NextResponse } from 'next/server'
 export async function GET() {
   try {
     const supabase = await createClient()
-    
-    // Get the current user's session
+
+    // Get the current user's session - this will automatically refresh if needed
     const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-    
+
     if (sessionError || !session) {
       return NextResponse.json(
         { success: false, error: 'Not authenticated' },
@@ -17,10 +17,11 @@ export async function GET() {
 
     // Get the provider token (Google access token)
     const providerToken = session.provider_token
+    const providerRefreshToken = session.provider_refresh_token
 
     if (!providerToken) {
       return NextResponse.json(
-        { success: false, error: 'No Google access token. Please sign in with Google.' },
+        { success: false, error: 'No Google access token. Please sign in with Google again to grant calendar access.' },
         { status: 401 }
       )
     }
@@ -41,6 +42,15 @@ export async function GET() {
     if (!calendarResponse.ok) {
       const errorData = await calendarResponse.json()
       console.error('Google Calendar API error:', errorData)
+
+      // If the error is due to invalid/expired token, ask user to sign in again
+      if (calendarResponse.status === 401 || errorData.error?.message?.includes('Invalid Credentials')) {
+        return NextResponse.json(
+          { success: false, error: 'Your Google Calendar access has expired. Please sign in with Google again.' },
+          { status: 401 }
+        )
+      }
+
       return NextResponse.json(
         { success: false, error: 'Failed to fetch calendar events' },
         { status: calendarResponse.status }
