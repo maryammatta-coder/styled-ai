@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Styled AI</string>
+    <string name="title_activity_main">Styled AI</string>
+    <string name="package_name">com.styledai.app</string>
+    <string name="custom_url_scheme">com.styledai.app</string>
+</resources>
