@@ -109,19 +109,8 @@ export default function DashboardPage() {
       </div>
 
       <div className="max-w-7xl mx-auto px-6 py-10">
-        {/* Get Outfit CTA */}
-        <div className="mb-10 text-center">
-          <button
-            onClick={() => router.push('/outfits/generate')}
-            className="bg-blush text-dark-taupe px-12 py-4 rounded-full font-medium hover:bg-blush/80 transition-all shadow-sm tracking-wide inline-flex items-center gap-3"
-          >
-            <Shirt className="w-5 h-5" />
-            GET OUTFIT
-          </button>
-        </div>
-
         {/* Icon Navigation Row */}
-        <div className="flex justify-center gap-12 mb-12 pb-8 border-b border-taupe/10">
+        <div className="flex justify-center gap-12 mb-10 pb-8 border-b border-taupe/10">
           {/* Closet */}
           <button
             onClick={() => router.push('/closet')}
@@ -164,6 +153,17 @@ export default function DashboardPage() {
               <Luggage className="w-6 h-6 text-dark-taupe" />
             </div>
             <span className="text-sm font-medium text-dark-taupe tracking-wide">Packing</span>
+          </button>
+        </div>
+
+        {/* Get Outfit CTA */}
+        <div className="mb-12 text-center">
+          <button
+            onClick={() => router.push('/outfits/generate')}
+            className="bg-blush text-dark-taupe px-12 py-4 rounded-full font-medium hover:bg-blush/80 transition-all shadow-sm tracking-wide inline-flex items-center gap-3"
+          >
+            <Shirt className="w-5 h-5" />
+            GET OUTFIT
           </button>
         </div>
 
