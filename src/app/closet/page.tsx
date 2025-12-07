@@ -4,9 +4,12 @@ import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { ClosetItem } from '@/types'
-import { Plus, Home, X, Upload, RefreshCw, Pencil, Check, Loader2, Crop, Calendar, Clock, DollarSign, Trash2, History, Search, Filter, ChevronDown } from 'lucide-react'
+import { Plus, Home, X, Upload, RefreshCw, Pencil, Check, Loader2, Crop, Calendar, Clock, DollarSign, Trash2, History, Search, Filter, ChevronDown, Camera as CameraIcon } from 'lucide-react'
 import ReactCrop, { type Crop as CropType, centerCrop, makeAspectCrop } from 'react-image-crop'
 import 'react-image-crop/dist/ReactCrop.css'
+import { Camera } from '@capacitor/camera'
+import { CameraResultType, CameraSource } from '@capacitor/camera'
+import { Capacitor } from '@capacitor/core'
 
 const CATEGORIES = ['top', 'bottom', 'dress', 'outerwear', 'shoes', 'accessory', 'bag', 'jewelry']
 const SEASONS = ['spring', 'summer', 'fall', 'winter']
@@ -120,7 +123,7 @@ export default function ClosetPage() {
       for (const file of Array.from(files)) {
         const fileExt = file.name.split('.').pop()
         const fileName = `${user.id}/${Date.now()}.${fileExt}`
-        
+
         const { error: uploadError } = await supabase.storage
           .from('closet-images')
           .upload(fileName, file)
@@ -167,6 +170,168 @@ export default function ClosetPage() {
     } catch (err: any) {
       console.error(err)
       alert(err.message || 'Error uploading images')
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const handleTakePhoto = async () => {
+    // Check if we're on a native platform
+    if (!Capacitor.isNativePlatform()) {
+      alert('Camera is only available on mobile devices')
+      return
+    }
+
+    setUploading(true)
+    try {
+      const image = await Camera.getPhoto({
+        quality: 90,
+        allowEditing: true,
+        resultType: CameraResultType.Uri,
+        source: CameraSource.Camera
+      })
+
+      if (!image.webPath) {
+        throw new Error('No image captured')
+      }
+
+      // Fetch the image blob from the webPath
+      const response = await fetch(image.webPath)
+      const blob = await response.blob()
+
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('No user')
+
+      const fileName = `${user.id}/${Date.now()}.jpg`
+
+      const { error: uploadError } = await supabase.storage
+        .from('closet-images')
+        .upload(fileName, blob)
+
+      if (uploadError) throw uploadError
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('closet-images')
+        .getPublicUrl(fileName)
+
+      const { data: newItem, error: insertError } = await supabase
+        .from('closet_items')
+        .insert([{
+          user_id: user.id,
+          image_url: publicUrl,
+          name: 'Analyzing...',
+          category: 'top',
+          color: 'unknown',
+          season: ['spring', 'summer', 'fall', 'winter'],
+          vibe: ['casual'],
+          source: 'camera_capture'
+        }])
+        .select()
+        .single()
+
+      if (insertError) throw insertError
+
+      if (newItem) {
+        fetch('/api/closet/classify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            imageUrl: publicUrl,
+            itemId: newItem.id
+          })
+        }).then(() => {
+          loadClosetItems()
+        }).catch(err => console.error('Classification error:', err))
+      }
+
+      await loadClosetItems()
+      setShowUploadModal(false)
+    } catch (err: any) {
+      console.error(err)
+      if (err.message !== 'User cancelled photos app') {
+        alert(err.message || 'Error taking photo')
+      }
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const handleChooseFromLibrary = async () => {
+    // Check if we're on a native platform
+    if (!Capacitor.isNativePlatform()) {
+      alert('Photo library is only available on mobile devices')
+      return
+    }
+
+    setUploading(true)
+    try {
+      const image = await Camera.getPhoto({
+        quality: 90,
+        allowEditing: true,
+        resultType: CameraResultType.Uri,
+        source: CameraSource.Photos
+      })
+
+      if (!image.webPath) {
+        throw new Error('No image selected')
+      }
+
+      // Fetch the image blob from the webPath
+      const response = await fetch(image.webPath)
+      const blob = await response.blob()
+
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('No user')
+
+      const fileName = `${user.id}/${Date.now()}.jpg`
+
+      const { error: uploadError } = await supabase.storage
+        .from('closet-images')
+        .upload(fileName, blob)
+
+      if (uploadError) throw uploadError
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('closet-images')
+        .getPublicUrl(fileName)
+
+      const { data: newItem, error: insertError } = await supabase
+        .from('closet_items')
+        .insert([{
+          user_id: user.id,
+          image_url: publicUrl,
+          name: 'Analyzing...',
+          category: 'top',
+          color: 'unknown',
+          season: ['spring', 'summer', 'fall', 'winter'],
+          vibe: ['casual'],
+          source: 'photo_library'
+        }])
+        .select()
+        .single()
+
+      if (insertError) throw insertError
+
+      if (newItem) {
+        fetch('/api/closet/classify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            imageUrl: publicUrl,
+            itemId: newItem.id
+          })
+        }).then(() => {
+          loadClosetItems()
+        }).catch(err => console.error('Classification error:', err))
+      }
+
+      await loadClosetItems()
+      setShowUploadModal(false)
+    } catch (err: any) {
+      console.error(err)
+      if (err.message !== 'User cancelled photos app') {
+        alert(err.message || 'Error choosing photo')
+      }
     } finally {
       setUploading(false)
     }
@@ -1006,39 +1171,67 @@ export default function ClosetPage() {
               </button>
             </div>
 
-            <label className="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-xl p-12 cursor-pointer hover:border-rose-500 transition">
-              <Upload className="w-16 h-16 text-gray-400 mb-4" />
-              <span className="text-lg font-medium text-gray-700">Click to upload photos</span>
-              <span className="text-sm text-gray-500 mt-2">or drag and drop</span>
-              <input
-                type="file"
-                multiple
-                accept="image/*"
-                onChange={handleImageUpload}
-                disabled={uploading}
-                className="hidden"
-              />
-            </label>
-
-            {uploading && (
-              <div className="mt-4 text-center">
-                <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-rose-500 border-t-transparent"></div>
-                <p className="mt-2 text-gray-600">Uploading...</p>
+            {uploading ? (
+              <div className="py-12 text-center">
+                <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-rose-500 border-t-transparent"></div>
+                <p className="mt-4 text-gray-600 font-medium">Processing...</p>
               </div>
-            )}
+            ) : (
+              <div className="space-y-4">
+                {Capacitor.isNativePlatform() && (
+                  <>
+                    <button
+                      onClick={handleTakePhoto}
+                      className="w-full flex items-center justify-center gap-3 bg-gradient-to-r from-rose-500 to-pink-500 text-white px-6 py-4 rounded-xl font-semibold hover:opacity-90 transition shadow-md"
+                    >
+                      <CameraIcon className="w-6 h-6" />
+                      Take Photo
+                    </button>
 
-            {!uploading && (
-              <div className="mt-6 pt-6 border-t border-gray-200">
-                <button
-                  disabled
-                  className="w-full border-2 border-gray-300 text-gray-400 px-6 py-3 rounded-lg font-semibold cursor-not-allowed flex items-center justify-center gap-2"
-                  title="Coming soon"
-                >
-                  ✨ We'll do it for you — COMING SOON
-                </button>
-                <p className="text-xs text-gray-400 text-center mt-2">
-                  Professional photographer service launching soon
-                </p>
+                    <button
+                      onClick={handleChooseFromLibrary}
+                      className="w-full flex items-center justify-center gap-3 bg-gradient-to-r from-purple-500 to-indigo-500 text-white px-6 py-4 rounded-xl font-semibold hover:opacity-90 transition shadow-md"
+                    >
+                      <Upload className="w-6 h-6" />
+                      Choose from Library
+                    </button>
+
+                    <div className="relative">
+                      <div className="absolute inset-0 flex items-center">
+                        <div className="w-full border-t border-gray-300"></div>
+                      </div>
+                      <div className="relative flex justify-center text-sm">
+                        <span className="px-2 bg-white text-gray-500">or</span>
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                <label className="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-xl p-8 cursor-pointer hover:border-rose-500 transition">
+                  <Upload className="w-12 h-12 text-gray-400 mb-3" />
+                  <span className="text-base font-medium text-gray-700">Upload from device</span>
+                  <span className="text-sm text-gray-500 mt-1">Click to browse files</span>
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    className="hidden"
+                  />
+                </label>
+
+                <div className="pt-4 border-t border-gray-200">
+                  <button
+                    disabled
+                    className="w-full border-2 border-gray-300 text-gray-400 px-6 py-3 rounded-lg font-semibold cursor-not-allowed flex items-center justify-center gap-2"
+                    title="Coming soon"
+                  >
+                    ✨ We'll do it for you — COMING SOON
+                  </button>
+                  <p className="text-xs text-gray-400 text-center mt-2">
+                    Professional photographer service launching soon
+                  </p>
+                </div>
               </div>
             )}
           </div>
