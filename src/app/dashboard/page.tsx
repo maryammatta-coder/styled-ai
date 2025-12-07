@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { User, ClosetItem, Outfit } from '@/types'
-import { Shirt, Camera, Calendar, LogOut, User as UserIcon, Heart, Luggage, Image } from 'lucide-react'
+import { Shirt, Calendar, LogOut, User as UserIcon, Heart, Luggage, Image } from 'lucide-react'
 import WeatherDisplay from '@/components/WeatherDisplay'
 
 export default function DashboardPage() {
@@ -117,7 +117,9 @@ export default function DashboardPage() {
             className="flex flex-col items-center gap-2 group"
           >
             <div className="p-4 rounded-full bg-beige border border-taupe/10 group-hover:bg-taupe/20 transition-colors">
-              <Shirt className="w-6 h-6 text-dark-taupe" />
+              <svg className="w-6 h-6 text-dark-taupe" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v3m0 0a3 3 0 00-3 3v1m3-4a3 3 0 013 3v1m-6 0h6m-6 0l-3 9h12l-3-9" />
+              </svg>
             </div>
             <span className="text-sm font-medium text-dark-taupe tracking-wide">Closet</span>
           </button>
