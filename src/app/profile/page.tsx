@@ -217,34 +217,34 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+      <div className="min-h-screen bg-cream flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-warm-grey" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-cream">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
+      <header className="bg-beige border-b border-taupe/20 sticky top-0 z-10 backdrop-blur-sm bg-beige/90">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button
               onClick={() => router.push('/dashboard')}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              className="p-2 hover:bg-taupe/20 rounded-full transition-colors"
             >
-              <ArrowLeft className="w-5 h-5" />
+              <ArrowLeft className="w-5 h-5 text-warm-grey" />
             </button>
-            <h1 className="text-xl font-semibold">Profile & Preferences</h1>
+            <h1 className="text-xl font-light tracking-wide text-dark-taupe">PROFILE & PREFERENCES</h1>
           </div>
 
           <button
             onClick={handleSave}
             disabled={saving}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-full font-medium transition-colors shadow-sm ${
               saved
-                ? 'bg-green-100 text-green-700'
-                : 'bg-black text-white hover:bg-gray-800'
+                ? 'bg-blush/50 text-dark-taupe'
+                : 'bg-blush text-dark-taupe hover:bg-blush/80'
             }`}
           >
             {saving ? (
@@ -262,10 +262,10 @@ export default function ProfilePage() {
       {/* Error Banner */}
       {error && (
         <div className="max-w-4xl mx-auto px-4 pt-4">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-center justify-between">
-            <span className="text-red-700 text-sm">{error}</span>
+          <div className="bg-blush/30 border border-taupe/20 rounded-2xl p-3 flex items-center justify-between">
+            <span className="text-dark-taupe text-sm">{error}</span>
             <button onClick={() => setError(null)}>
-              <X className="w-4 h-4 text-red-500" />
+              <X className="w-4 h-4 text-warm-grey" />
             </button>
           </div>
         </div>
@@ -273,26 +273,26 @@ export default function ProfilePage() {
 
       <main className="max-w-4xl mx-auto px-4 py-6 space-y-6">
         {/* Account Info */}
-        <section className="bg-white rounded-xl border border-gray-200 p-6">
+        <section className="bg-beige rounded-3xl border border-taupe/10 p-6">
           <div className="flex items-center gap-3 mb-4">
-            <div className="p-2 bg-gray-100 rounded-lg">
-              <User className="w-5 h-5 text-gray-600" />
+            <div className="p-2 bg-taupe/20 rounded-full">
+              <User className="w-5 h-5 text-dark-taupe" />
             </div>
-            <h2 className="text-lg font-semibold">Account</h2>
+            <h2 className="text-lg font-medium text-dark-taupe tracking-wide">Account</h2>
           </div>
-          <div className="text-gray-600">
-            <p className="text-sm text-gray-500">Email</p>
-            <p className="font-medium">{profile?.email}</p>
+          <div className="text-warm-grey">
+            <p className="text-sm text-warm-grey">Email</p>
+            <p className="font-medium text-dark-taupe">{profile?.email}</p>
           </div>
         </section>
 
         {/* Location & Weather */}
-        <section className="bg-white rounded-xl border border-gray-200 p-6">
+        <section className="bg-beige rounded-3xl border border-taupe/10 p-6">
           <div className="flex items-center gap-3 mb-4">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <MapPin className="w-5 h-5 text-blue-600" />
+            <div className="p-2 bg-taupe/20 rounded-full">
+              <MapPin className="w-5 h-5 text-dark-taupe" />
             </div>
-            <h2 className="text-lg font-semibold">Location & Weather</h2>
+            <h2 className="text-lg font-medium text-dark-taupe tracking-wide">Location & Weather</h2>
           </div>
 
           {/* Current Weather Preview */}
@@ -307,10 +307,10 @@ export default function ProfilePage() {
           )}
 
           <div className="space-y-4">
-            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+            <div className="flex items-center justify-between p-3 bg-cream rounded-2xl border border-taupe/10">
               <div>
-                <p className="font-medium">Auto-detect location</p>
-                <p className="text-sm text-gray-500">
+                <p className="font-medium text-dark-taupe">Auto-detect location</p>
+                <p className="text-sm text-warm-grey">
                   Use your current location for weather
                 </p>
               </div>
@@ -323,7 +323,7 @@ export default function ProfilePage() {
                   }
                 }}
                 className={`relative w-12 h-6 rounded-full transition-colors ${
-                  useAutoLocation ? 'bg-blue-500' : 'bg-gray-300'
+                  useAutoLocation ? 'bg-blush' : 'bg-taupe/30'
                 }`}
               >
                 <span
@@ -337,17 +337,17 @@ export default function ProfilePage() {
             {!useAutoLocation && (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-sm text-gray-500 mb-1">City</label>
+                  <label className="block text-sm text-warm-grey mb-1">City</label>
                   <input
                     type="text"
                     value={homeCity}
                     onChange={(e) => setHomeCity(e.target.value)}
                     placeholder="Miami"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-taupe/30 bg-cream rounded-full focus:outline-none focus:ring-2 focus:ring-blush text-dark-taupe placeholder-warm-grey"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-500 mb-1">
+                  <label className="block text-sm text-warm-grey mb-1">
                     State/Region
                   </label>
                   <input
@@ -355,17 +355,17 @@ export default function ProfilePage() {
                     value={homeRegion}
                     onChange={(e) => setHomeRegion(e.target.value)}
                     placeholder="Florida"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-taupe/30 bg-cream rounded-full focus:outline-none focus:ring-2 focus:ring-blush text-dark-taupe placeholder-warm-grey"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-500 mb-1">Country</label>
+                  <label className="block text-sm text-warm-grey mb-1">Country</label>
                   <input
                     type="text"
                     value={homeCountry}
                     onChange={(e) => setHomeCountry(e.target.value)}
                     placeholder="USA"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-taupe/30 bg-cream rounded-full focus:outline-none focus:ring-2 focus:ring-blush text-dark-taupe placeholder-warm-grey"
                   />
                 </div>
               </div>
@@ -374,17 +374,17 @@ export default function ProfilePage() {
         </section>
 
         {/* Style Preferences */}
-        <section className="bg-white rounded-xl border border-gray-200 p-6">
+        <section className="bg-beige rounded-3xl border border-taupe/10 p-6">
           <div className="flex items-center gap-3 mb-4">
-            <div className="p-2 bg-purple-100 rounded-lg">
-              <Palette className="w-5 h-5 text-purple-600" />
+            <div className="p-2 bg-taupe/20 rounded-full">
+              <Palette className="w-5 h-5 text-dark-taupe" />
             </div>
-            <h2 className="text-lg font-semibold">Style Preferences</h2>
+            <h2 className="text-lg font-medium text-dark-taupe tracking-wide">Style Preferences</h2>
           </div>
 
           {/* Style Vibes */}
           <div className="mb-6">
-            <p className="text-sm text-gray-500 mb-3">Your Style Vibes</p>
+            <p className="text-sm text-warm-grey mb-3">Your Style Vibes</p>
             <div className="flex flex-wrap gap-2">
               {STYLE_VIBES.map((vibe) => (
                 <button
@@ -392,8 +392,8 @@ export default function ProfilePage() {
                   onClick={() => toggleStyleVibe(vibe)}
                   className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
                     styleVibes.includes(vibe)
-                      ? 'bg-purple-100 text-purple-700 border-2 border-purple-300'
-                      : 'bg-gray-100 text-gray-600 border-2 border-transparent hover:bg-gray-200'
+                      ? 'bg-blush/30 text-dark-taupe border-2 border-blush shadow-sm'
+                      : 'bg-cream text-warm-grey border-2 border-transparent hover:bg-taupe/10'
                   }`}
                 >
                   {vibe}
@@ -404,7 +404,7 @@ export default function ProfilePage() {
 
           {/* Favorite Colors */}
           <div className="mb-6">
-            <p className="text-sm text-gray-500 mb-3">Favorite Colors</p>
+            <p className="text-sm text-warm-grey mb-3">Favorite Colors</p>
             <div className="flex flex-wrap gap-2">
               {COLORS.map((color) => (
                 <button
@@ -412,12 +412,12 @@ export default function ProfilePage() {
                   onClick={() => toggleColor(color.name, 'palette')}
                   className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm transition-all ${
                     colorPalette.includes(color.name)
-                      ? 'bg-green-100 text-green-700 ring-2 ring-green-300'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      ? 'bg-blush/30 text-dark-taupe ring-2 ring-blush'
+                      : 'bg-cream text-warm-grey hover:bg-taupe/10'
                   }`}
                 >
                   <span
-                    className="w-4 h-4 rounded-full border border-gray-300"
+                    className="w-4 h-4 rounded-full border border-taupe/30"
                     style={{ backgroundColor: color.value }}
                   />
                   {color.name}
@@ -431,7 +431,7 @@ export default function ProfilePage() {
 
           {/* Colors to Avoid */}
           <div>
-            <p className="text-sm text-gray-500 mb-3">Colors to Avoid</p>
+            <p className="text-sm text-warm-grey mb-3">Colors to Avoid</p>
             <div className="flex flex-wrap gap-2">
               {COLORS.map((color) => (
                 <button
@@ -439,12 +439,12 @@ export default function ProfilePage() {
                   onClick={() => toggleColor(color.name, 'avoid')}
                   className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm transition-all ${
                     avoidColors.includes(color.name)
-                      ? 'bg-red-100 text-red-700 ring-2 ring-red-300'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      ? 'bg-taupe/30 text-dark-taupe ring-2 ring-taupe'
+                      : 'bg-cream text-warm-grey hover:bg-taupe/10'
                   }`}
                 >
                   <span
-                    className="w-4 h-4 rounded-full border border-gray-300"
+                    className="w-4 h-4 rounded-full border border-taupe/30"
                     style={{ backgroundColor: color.value }}
                   />
                   {color.name}
@@ -456,12 +456,12 @@ export default function ProfilePage() {
         </section>
 
         {/* Budget */}
-        <section className="bg-white rounded-xl border border-gray-200 p-6">
+        <section className="bg-beige rounded-3xl border border-taupe/10 p-6">
           <div className="flex items-center gap-3 mb-4">
-            <div className="p-2 bg-green-100 rounded-lg">
-              <DollarSign className="w-5 h-5 text-green-600" />
+            <div className="p-2 bg-taupe/20 rounded-full">
+              <DollarSign className="w-5 h-5 text-dark-taupe" />
             </div>
-            <h2 className="text-lg font-semibold">Budget Preferences</h2>
+            <h2 className="text-lg font-medium text-dark-taupe tracking-wide">Budget Preferences</h2>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -469,36 +469,36 @@ export default function ProfilePage() {
               <button
                 key={level.value}
                 onClick={() => setBudgetLevel(level.value)}
-                className={`p-4 rounded-xl text-left transition-all ${
+                className={`p-4 rounded-2xl text-left transition-all ${
                   budgetLevel === level.value
-                    ? 'bg-green-50 border-2 border-green-300'
-                    : 'bg-gray-50 border-2 border-transparent hover:bg-gray-100'
+                    ? 'bg-blush/30 border-2 border-blush shadow-sm'
+                    : 'bg-cream border-2 border-transparent hover:bg-taupe/10'
                 }`}
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-xl font-semibold">{level.value}</span>
+                  <span className="text-xl font-semibold text-dark-taupe">{level.value}</span>
                   {budgetLevel === level.value && (
-                    <Check className="w-5 h-5 text-green-600" />
+                    <Check className="w-5 h-5 text-dark-taupe" />
                   )}
                 </div>
-                <p className="font-medium text-gray-900">{level.label}</p>
-                <p className="text-sm text-gray-500">{level.description}</p>
+                <p className="font-medium text-dark-taupe">{level.label}</p>
+                <p className="text-sm text-warm-grey">{level.description}</p>
               </button>
             ))}
           </div>
         </section>
 
         {/* Danger Zone */}
-        <section className="bg-white rounded-xl border border-red-200 p-6">
-          <h2 className="text-lg font-semibold text-red-600 mb-4">Danger Zone</h2>
+        <section className="bg-beige rounded-3xl border border-taupe/20 p-6">
+          <h2 className="text-lg font-medium text-dark-taupe mb-4 tracking-wide">Danger Zone</h2>
           <div className="flex items-center justify-between">
             <div>
-              <p className="font-medium">Delete Account</p>
-              <p className="text-sm text-gray-500">
+              <p className="font-medium text-dark-taupe">Delete Account</p>
+              <p className="text-sm text-warm-grey">
                 Permanently delete your account and all data
               </p>
             </div>
-            <button className="px-4 py-2 text-red-600 border border-red-300 rounded-lg hover:bg-red-50 transition-colors">
+            <button className="px-4 py-2 text-dark-taupe border border-taupe/30 rounded-full hover:bg-taupe/20 transition-colors">
               Delete Account
             </button>
           </div>
