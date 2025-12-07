@@ -109,58 +109,61 @@ export default function DashboardPage() {
       </div>
 
       <div className="max-w-7xl mx-auto px-6 py-10">
-        {/* Quick Action Cards */}
-        <div className="grid md:grid-cols-5 gap-5 mb-12">
-          {/* Generate Outfit */}
+        {/* Get Outfit CTA */}
+        <div className="mb-10 text-center">
           <button
             onClick={() => router.push('/outfits/generate')}
-            className="bg-blush text-dark-taupe p-8 rounded-3xl shadow-sm hover:shadow-md transition-all text-left border border-taupe/10 group"
+            className="bg-blush text-dark-taupe px-12 py-4 rounded-full font-medium hover:bg-blush/80 transition-all shadow-sm tracking-wide inline-flex items-center gap-3"
           >
-            <Shirt className="w-8 h-8 mb-3 group-hover:scale-110 transition-transform" />
-            <h3 className="font-medium text-base tracking-wide mb-1">GET OUTFIT</h3>
-            <p className="text-xs text-warm-grey">AI-styled for today</p>
+            <Shirt className="w-5 h-5" />
+            GET OUTFIT
           </button>
+        </div>
 
-          {/* My Closet */}
+        {/* Icon Navigation Row */}
+        <div className="flex justify-center gap-12 mb-12 pb-8 border-b border-taupe/10">
+          {/* Closet */}
           <button
             onClick={() => router.push('/closet')}
-            className="bg-beige p-8 rounded-3xl shadow-sm hover:shadow-md transition-all text-left border border-taupe/10 group"
+            className="flex flex-col items-center gap-2 group"
           >
-            <Camera className="w-8 h-8 mb-3 text-dark-taupe group-hover:scale-110 transition-transform" />
-            <h3 className="font-medium text-base text-dark-taupe tracking-wide mb-1">MY CLOSET</h3>
-            <p className="text-xs text-warm-grey">
-              {closetItems.length} items
-            </p>
+            <div className="p-4 rounded-full bg-beige border border-taupe/10 group-hover:bg-taupe/20 transition-colors">
+              <Shirt className="w-6 h-6 text-dark-taupe" />
+            </div>
+            <span className="text-sm font-medium text-dark-taupe tracking-wide">Closet</span>
           </button>
 
           {/* Inspo */}
           <button
             onClick={() => router.push('/inspo')}
-            className="bg-beige p-8 rounded-3xl shadow-sm hover:shadow-md transition-all text-left border border-taupe/10 group"
+            className="flex flex-col items-center gap-2 group"
           >
-            <Image className="w-8 h-8 mb-3 text-dark-taupe group-hover:scale-110 transition-transform" />
-            <h3 className="font-medium text-base text-dark-taupe tracking-wide mb-1">INSPO</h3>
-            <p className="text-xs text-warm-grey">Outfit inspiration</p>
+            <div className="p-4 rounded-full bg-beige border border-taupe/10 group-hover:bg-taupe/20 transition-colors">
+              <Image className="w-6 h-6 text-dark-taupe" />
+            </div>
+            <span className="text-sm font-medium text-dark-taupe tracking-wide">Inspo</span>
           </button>
 
           {/* Calendar */}
           <button
             onClick={() => router.push('/calendar')}
-            className="bg-beige p-8 rounded-3xl shadow-sm hover:shadow-md transition-all text-left border border-taupe/10 group"
+            className="flex flex-col items-center gap-2 group"
           >
-            <Calendar className="w-8 h-8 mb-3 text-dark-taupe group-hover:scale-110 transition-transform" />
-            <h3 className="font-medium text-base text-dark-taupe tracking-wide mb-1">CALENDAR</h3>
-            <p className="text-xs text-warm-grey">Plan your week</p>
+            <div className="p-4 rounded-full bg-beige border border-taupe/10 group-hover:bg-taupe/20 transition-colors">
+              <Calendar className="w-6 h-6 text-dark-taupe" />
+            </div>
+            <span className="text-sm font-medium text-dark-taupe tracking-wide">Calendar</span>
           </button>
 
-          {/* Packing List */}
+          {/* Packing */}
           <button
             onClick={() => router.push('/packing')}
-            className="bg-beige p-8 rounded-3xl shadow-sm hover:shadow-md transition-all text-left border border-taupe/10 group"
+            className="flex flex-col items-center gap-2 group"
           >
-            <Luggage className="w-8 h-8 mb-3 text-dark-taupe group-hover:scale-110 transition-transform" />
-            <h3 className="font-medium text-base text-dark-taupe tracking-wide mb-1">PACKING</h3>
-            <p className="text-xs text-warm-grey">Trip essentials</p>
+            <div className="p-4 rounded-full bg-beige border border-taupe/10 group-hover:bg-taupe/20 transition-colors">
+              <Luggage className="w-6 h-6 text-dark-taupe" />
+            </div>
+            <span className="text-sm font-medium text-dark-taupe tracking-wide">Packing</span>
           </button>
         </div>
 
@@ -190,7 +193,7 @@ export default function DashboardPage() {
               </button>
             </div>
           ) : (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid md:grid-cols-2 gap-6">
               {outfits.slice(0, 6).map((outfit) => {
                 const outfitItems = closetItems.filter(item =>
                   outfit.outfit_data.closet_item_ids?.includes(item.id)
