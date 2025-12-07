@@ -913,51 +913,50 @@ Create ${count} DIFFERENT outfits. Every outfit MUST have shoes AND a bag!`
       return outfit
     })
 
-    // Regenerate descriptions for outfits where items were swapped
-    const outfitsNeedingRegen = validatedOutfits.filter((o: any) => o._itemsWereSwapped)
+    // ALWAYS regenerate descriptions based on actual selected items to ensure accuracy
+    // This prevents mismatches between photos and descriptions
+    for (const outfit of validatedOutfits) {
+      const itemDetails = (outfit.closet_item_ids || [])
+        .map((id: string) => closetItems.find((item: ClosetItem) => item.id === id))
+        .filter((item: ClosetItem | undefined): item is ClosetItem => item !== undefined)
 
-    if (outfitsNeedingRegen.length > 0) {
-      // Regenerate descriptions for swapped outfits
-      for (const outfit of outfitsNeedingRegen) {
-        const itemDetails = (outfit.closet_item_ids || [])
-          .map((id: string) => closetItems.find((item: ClosetItem) => item.id === id))
-          .filter((item: ClosetItem | undefined): item is ClosetItem => item !== undefined)
+      const itemList = itemDetails.map((i: ClosetItem) => `${i.name} (${i.category}, ${i.color})`).join(', ')
 
-        const itemList = itemDetails.map((i: ClosetItem) => i.name).join(', ')
+      const regenPrompt = `Write accurate descriptions for this outfit. Be specific and only mention the EXACT items listed below.
 
-        const regenPrompt = `You swapped items to fix a style clash. Please write updated descriptions for this outfit:
+EXACT ITEMS IN THIS OUTFIT: ${itemList}
 
-Items: ${itemList}
 Occasion: ${occasion}
 Weather: ${temperature}°F
 Formality: ${formalityCat}
 
+CRITICAL: Only mention the items I listed above. Do NOT mention any items that aren't in the list.
+
 Respond with JSON:
 {
-  "weather_rationale": "Why these items work for ${temperature}°F weather",
-  "style_rationale": "Why this outfit fits ${occasion} at ${formalityCat} formality"
+  "weather_rationale": "Explain why THESE SPECIFIC ITEMS work for ${temperature}°F weather",
+  "style_rationale": "Explain why THIS SPECIFIC OUTFIT fits ${occasion} at ${formalityCat} formality"
 }`
 
-        try {
-          const regenCompletion = await openai.chat.completions.create({
-            model: 'gpt-4o-mini',
-            messages: [
-              { role: 'system', content: 'You are a fashion stylist writing outfit descriptions.' },
-              { role: 'user', content: regenPrompt }
-            ],
-            response_format: { type: 'json_object' },
-            temperature: 0.7,
-          })
+      try {
+        const regenCompletion = await openai.chat.completions.create({
+          model: 'gpt-4o-mini',
+          messages: [
+            { role: 'system', content: 'You are a fashion stylist. Write descriptions that ONLY mention the exact items provided. Never mention items that are not in the list.' },
+            { role: 'user', content: regenPrompt }
+          ],
+          response_format: { type: 'json_object' },
+          temperature: 0.5,  // Lower temperature for more accurate descriptions
+        })
 
-          const regenData = JSON.parse(regenCompletion.choices[0]?.message?.content || '{}')
-          outfit.weather_rationale = regenData.weather_rationale || `Perfect for ${temperature}°F weather`
-          outfit.style_rationale = regenData.style_rationale || `Great choice for ${occasion}`
-        } catch (error) {
-          console.error('Failed to regenerate descriptions:', error)
-          // Use fallback descriptions
-          outfit.weather_rationale = `Styled for ${temperature}°F weather`
-          outfit.style_rationale = `Perfect for ${occasion}`
-        }
+        const regenData = JSON.parse(regenCompletion.choices[0]?.message?.content || '{}')
+        outfit.weather_rationale = regenData.weather_rationale || `Perfect for ${temperature}°F weather`
+        outfit.style_rationale = regenData.style_rationale || `Great choice for ${occasion}`
+      } catch (error) {
+        console.error('Failed to regenerate descriptions:', error)
+        // Use fallback descriptions
+        outfit.weather_rationale = `Styled for ${temperature}°F weather`
+        outfit.style_rationale = `Perfect for ${occasion}`
       }
     }
 
