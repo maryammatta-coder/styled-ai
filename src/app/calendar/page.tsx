@@ -404,30 +404,30 @@ const detectDestination = (event: CalendarEvent): string | null => {
   }, {})
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
+    <div className="min-h-screen bg-cream">
+      <header className="bg-beige border-b border-taupe/20 sticky top-0 z-10 backdrop-blur-sm bg-beige/90">
         <div className="max-w-4xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <button
                 onClick={() => router.push('/dashboard')}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                className="p-2 hover:bg-taupe/20 rounded-full transition-colors"
               >
-                <ArrowLeft className="w-5 h-5" />
+                <ArrowLeft className="w-5 h-5 text-warm-grey" />
               </button>
               <div>
-                <h1 className="text-xl font-semibold">Calendar</h1>
-                <p className="text-sm text-gray-500">Next 7 days</p>
+                <h1 className="text-xl font-light tracking-wide text-dark-taupe">CALENDAR</h1>
+                <p className="text-sm text-warm-grey">Next 7 days</p>
               </div>
             </div>
 
             <button
               onClick={fetchEvents}
               disabled={loading}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              className="p-2 hover:bg-taupe/20 rounded-full transition-colors"
               title="Refresh events"
             >
-              <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-5 h-5 text-warm-grey ${loading ? 'animate-spin' : ''}`} />
             </button>
           </div>
         </div>
@@ -436,8 +436,8 @@ const detectDestination = (event: CalendarEvent): string | null => {
       <main className="max-w-4xl mx-auto px-4 py-6">
         {loading && (
           <div className="flex flex-col items-center justify-center py-12">
-            <Loader2 className="w-8 h-8 animate-spin text-gray-400 mb-4" />
-            <p className="text-gray-500">Loading your calendar...</p>
+            <Loader2 className="w-8 h-8 animate-spin text-warm-grey mb-4" />
+            <p className="text-warm-grey">Loading your calendar...</p>
           </div>
         )}
 
@@ -460,10 +460,10 @@ const detectDestination = (event: CalendarEvent): string | null => {
         )}
 
         {!loading && !error && events.length === 0 && (
-          <div className="text-center py-12">
-            <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No Upcoming Events</h3>
-            <p className="text-gray-500">Your calendar is clear for the next 7 days!</p>
+          <div className="text-center py-12 bg-beige rounded-3xl border border-taupe/10">
+            <Calendar className="w-16 h-16 text-taupe mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-dark-taupe mb-2">No Upcoming Events</h3>
+            <p className="text-warm-grey">Your calendar is clear for the next 7 days!</p>
           </div>
         )}
 
@@ -471,22 +471,22 @@ const detectDestination = (event: CalendarEvent): string | null => {
           <div className="space-y-6">
             {Object.entries(groupedEvents).map(([date, dateEvents]) => (
               <div key={date}>
-                <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
+                <h2 className="text-sm font-medium text-warm-grey uppercase tracking-widest mb-3">
                   {date}
                 </h2>
                 <div className="space-y-3">
                   {dateEvents.map((event) => (
                     <div
                       key={event.id}
-                      className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md transition-shadow"
+                      className="bg-beige rounded-3xl border border-taupe/10 p-4 hover:shadow-lg transition-shadow"
                     >
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex-1 min-w-0">
-                          <h3 className="font-semibold text-gray-900 truncate">
+                          <h3 className="font-medium text-dark-taupe truncate">
                             {event.title}
                           </h3>
 
-                          <div className="flex flex-wrap gap-3 mt-2 text-sm text-gray-500">
+                          <div className="flex flex-wrap gap-3 mt-2 text-sm text-warm-grey">
                             <div className="flex items-center gap-1">
                               <Clock className="w-4 h-4" />
                               <span>{formatEventTime(event.start, event.end, event.isAllDay)}</span>
@@ -500,17 +500,17 @@ const detectDestination = (event: CalendarEvent): string | null => {
                           </div>
 
                           {event.description && (
-                            <p className="text-sm text-gray-500 mt-2 line-clamp-2">
+                            <p className="text-sm text-warm-grey mt-2 line-clamp-2">
                               {event.description}
                             </p>
                           )}
 
                           <div className="mt-2 flex flex-wrap gap-2">
-                            <span className="inline-block px-2 py-1 bg-purple-100 text-purple-700 text-xs font-medium rounded-full">
+                            <span className="inline-block px-2 py-1 bg-blush/30 text-dark-taupe text-xs font-medium rounded-full">
                               {detectOccasion(event)}
                             </span>
                             {detectDestination(event) && (
-                              <span className="inline-block px-2 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded-full">
+                              <span className="inline-block px-2 py-1 bg-taupe/30 text-dark-taupe text-xs font-medium rounded-full">
                                 📍 {detectDestination(event)}
                               </span>
                             )}
@@ -520,7 +520,7 @@ const detectDestination = (event: CalendarEvent): string | null => {
                         <button
                           onClick={() => setShowOutfitOptions(event)}
                           disabled={generatingOutfit === event.id}
-                          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-rose-500 to-teal-500 text-white rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 whitespace-nowrap"
+                          className="flex items-center gap-2 px-4 py-2 bg-blush text-dark-taupe rounded-full hover:bg-blush/80 transition disabled:opacity-50 whitespace-nowrap shadow-sm"
                         >
                           {generatingOutfit === event.id ? (
                             <>
@@ -545,14 +545,14 @@ const detectDestination = (event: CalendarEvent): string | null => {
         {/* Outfit Options Modal */}
         {showOutfitOptions && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl max-w-md w-full p-6">
-              <h2 className="text-xl font-semibold mb-2">Generate Outfit</h2>
-              <p className="text-gray-600 mb-4">
+            <div className="bg-beige rounded-3xl max-w-md w-full p-6 border border-taupe/10">
+              <h2 className="text-xl font-light tracking-wide text-dark-taupe mb-2">Generate Outfit</h2>
+              <p className="text-warm-grey mb-4 text-sm">
                 For: <span className="font-medium">{showOutfitOptions.title}</span>
               </p>
-              
+
               {detectDestination(showOutfitOptions) && (
-                <p className="text-sm text-blue-600 mb-4">
+                <p className="text-sm text-dark-taupe mb-4 bg-taupe/20 px-3 py-2 rounded-full inline-block">
                   📍 {detectDestination(showOutfitOptions)}
                 </p>
               )}
@@ -560,46 +560,46 @@ const detectDestination = (event: CalendarEvent): string | null => {
               <div className="space-y-3 mb-6">
                 <button
                   onClick={() => setSelectedItemSource('closet')}
-                  className={`w-full p-4 rounded-xl border-2 text-left transition ${
+                  className={`w-full p-4 rounded-2xl border-2 text-left transition ${
                     selectedItemSource === 'closet'
-                      ? 'border-rose-500 bg-rose-50'
-                      : 'border-gray-200 hover:border-gray-300'
+                      ? 'border-blush bg-blush/30 shadow-sm'
+                      : 'border-taupe/30 hover:border-taupe/50 bg-cream'
                   }`}
                 >
-                  <p className="font-semibold">👗 My Closet Only</p>
-                  <p className="text-sm text-gray-600">Use only items I already own</p>
+                  <p className="font-medium text-dark-taupe">👗 My Closet Only</p>
+                  <p className="text-sm text-warm-grey">Use only items I already own</p>
                 </button>
 
                 <button
                   onClick={() => setSelectedItemSource('mix')}
-                  className={`w-full p-4 rounded-xl border-2 text-left transition ${
+                  className={`w-full p-4 rounded-2xl border-2 text-left transition ${
                     selectedItemSource === 'mix'
-                      ? 'border-rose-500 bg-rose-50'
-                      : 'border-gray-200 hover:border-gray-300'
+                      ? 'border-blush bg-blush/30 shadow-sm'
+                      : 'border-taupe/30 hover:border-taupe/50 bg-cream'
                   }`}
                 >
-                  <p className="font-semibold">✨ Mix & Match</p>
-                  <p className="text-sm text-gray-600">Combine my closet with new suggestions</p>
+                  <p className="font-medium text-dark-taupe">✨ Mix & Match</p>
+                  <p className="text-sm text-warm-grey">Combine my closet with new suggestions</p>
                 </button>
 
                 <button
                   onClick={() => setSelectedItemSource('new')}
-                  className={`w-full p-4 rounded-xl border-2 text-left transition ${
+                  className={`w-full p-4 rounded-2xl border-2 text-left transition ${
                     selectedItemSource === 'new'
-                      ? 'border-rose-500 bg-rose-50'
-                      : 'border-gray-200 hover:border-gray-300'
+                      ? 'border-blush bg-blush/30 shadow-sm'
+                      : 'border-taupe/30 hover:border-taupe/50 bg-cream'
                   }`}
                 >
-                  <p className="font-semibold">🛍️ All New Items</p>
-                  <p className="text-sm text-gray-600">Suggest a complete new outfit to buy</p>
+                  <p className="font-medium text-dark-taupe">🛍️ All New Items</p>
+                  <p className="text-sm text-warm-grey">Suggest a complete new outfit to buy</p>
                 </button>
               </div>
 
               {/* Formality Slider */}
               <div className="mb-6">
                 <div className="flex justify-between items-center mb-3">
-                  <h3 className="text-lg font-semibold text-gray-800">Dress Code</h3>
-                  <span className="text-sm font-medium text-rose-500 bg-rose-50 px-3 py-1 rounded-full">
+                  <h3 className="text-lg font-medium text-dark-taupe">Dress Code</h3>
+                  <span className="text-sm font-medium text-dark-taupe bg-blush/30 px-3 py-1 rounded-full">
                     {getFormalityLabel(formalityLevel)}
                   </span>
                 </div>
@@ -611,12 +611,12 @@ const detectDestination = (event: CalendarEvent): string | null => {
                     max="100"
                     value={formalityLevel}
                     onChange={(e) => setFormalityLevel(Number(e.target.value))}
-                    className="w-full h-3 rounded-lg appearance-none cursor-pointer"
+                    className="w-full h-3 rounded-full appearance-none cursor-pointer"
                     style={{
-                      background: `linear-gradient(to right, #93c5fd 0%, #c4b5fd 50%, #fbcfe8 100%)`
+                      background: `linear-gradient(to right, #F5DAD1 0%, #E2D8CF 50%, #C8B9AE 100%)`
                     }}
                   />
-                  <div className="flex justify-between text-xs text-gray-500 mt-2">
+                  <div className="flex justify-between text-xs text-warm-grey mt-2">
                     <span>Casual</span>
                     <span>Smart Casual</span>
                     <span>Formal</span>
@@ -627,7 +627,7 @@ const detectDestination = (event: CalendarEvent): string | null => {
               <div className="flex gap-3">
                 <button
                   onClick={() => setShowOutfitOptions(null)}
-                  className="flex-1 px-4 py-3 border border-gray-300 rounded-xl hover:bg-gray-50 transition"
+                  className="flex-1 px-4 py-3 border border-taupe/30 bg-cream rounded-full hover:bg-taupe/20 transition text-dark-taupe"
                 >
                   Cancel
                 </button>
@@ -638,7 +638,7 @@ const detectDestination = (event: CalendarEvent): string | null => {
                     generateOutfitForEvent(event, selectedItemSource, formalityLevel)
                   }}
                   disabled={generatingOutfit !== null}
-                  className="flex-1 px-4 py-3 bg-gradient-to-r from-rose-500 to-teal-500 text-white rounded-xl hover:opacity-90 transition disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="flex-1 px-4 py-3 bg-blush text-dark-taupe rounded-full hover:bg-blush/80 transition disabled:opacity-50 flex items-center justify-center gap-2 shadow-sm"
                 >
                   {generatingOutfit ? (
                     <>
@@ -660,18 +660,18 @@ const detectDestination = (event: CalendarEvent): string | null => {
         {/* Results Modal with 3 Outfit Options */}
         {showResultsModal && generatedOutfits.length > 0 && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-            <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="bg-beige rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-taupe/10">
               {/* Header */}
-              <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between z-10">
+              <div className="sticky top-0 bg-beige border-b border-taupe/20 px-6 py-4 flex items-center justify-between z-10 rounded-t-3xl">
                 <div>
-                  <h2 className="text-xl font-semibold">Your Outfit Options</h2>
-                  <p className="text-sm text-gray-500">Pick your favorite ({currentOutfitIndex + 1} of {generatedOutfits.length})</p>
+                  <h2 className="text-xl font-light tracking-wide text-dark-taupe">Your Outfit Options</h2>
+                  <p className="text-sm text-warm-grey">Pick your favorite ({currentOutfitIndex + 1} of {generatedOutfits.length})</p>
                 </div>
                 <button
                   onClick={() => setShowResultsModal(false)}
-                  className="p-2 hover:bg-gray-100 rounded-full"
+                  className="p-2 hover:bg-taupe/20 rounded-full"
                 >
-                  <X className="w-5 h-5" />
+                  <X className="w-5 h-5 text-warm-grey" />
                 </button>
               </div>
 
@@ -682,19 +682,19 @@ const detectDestination = (event: CalendarEvent): string | null => {
                     <button
                       onClick={() => setCurrentOutfitIndex(Math.max(0, currentOutfitIndex - 1))}
                       disabled={currentOutfitIndex === 0}
-                      className="p-2 rounded-full hover:bg-gray-100 disabled:opacity-30 disabled:hover:bg-transparent"
+                      className="p-2 rounded-full hover:bg-taupe/20 disabled:opacity-30 disabled:hover:bg-transparent"
                     >
-                      <ChevronLeft className="w-6 h-6" />
+                      <ChevronLeft className="w-6 h-6 text-dark-taupe" />
                     </button>
-                    <span className="text-sm font-medium px-4 py-2 bg-gray-100 rounded-full">
+                    <span className="text-sm font-medium px-4 py-2 bg-cream rounded-full text-dark-taupe">
                       Option {currentOutfitIndex + 1}
                     </span>
                     <button
                       onClick={() => setCurrentOutfitIndex(Math.min(generatedOutfits.length - 1, currentOutfitIndex + 1))}
                       disabled={currentOutfitIndex === generatedOutfits.length - 1}
-                      className="p-2 rounded-full hover:bg-gray-100 disabled:opacity-30 disabled:hover:bg-transparent"
+                      className="p-2 rounded-full hover:bg-taupe/20 disabled:opacity-30 disabled:hover:bg-transparent"
                     >
-                      <ChevronRight className="w-6 h-6" />
+                      <ChevronRight className="w-6 h-6 text-dark-taupe" />
                     </button>
                   </div>
                 )}
@@ -709,19 +709,19 @@ const detectDestination = (event: CalendarEvent): string | null => {
                       {/* Closet Items */}
                       {outfit.outfit_data?.closet_items?.length > 0 && (
                         <div className="mb-6">
-                          <h3 className="font-medium text-gray-700 mb-3">From Your Closet:</h3>
+                          <h3 className="font-medium text-dark-taupe mb-3">From Your Closet:</h3>
                           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                             {outfit.outfit_data.closet_items.map((item: any) => (
                               <div key={item.id} className="text-center">
-                                <div className="aspect-[4/5] bg-gray-100 rounded-lg overflow-hidden mb-2">
+                                <div className="aspect-[4/5] bg-cream rounded-2xl overflow-hidden mb-2 border border-taupe/10">
                                   <img
                                     src={item.image_url}
                                     alt={item.name}
                                     className="w-full h-full object-cover"
                                   />
                                 </div>
-                                <p className="text-sm font-medium truncate">{item.name}</p>
-                                <p className="text-xs text-gray-500 capitalize">{item.category}</p>
+                                <p className="text-sm font-medium truncate text-dark-taupe">{item.name}</p>
+                                <p className="text-xs text-warm-grey capitalize">{item.category}</p>
                               </div>
                             ))}
                           </div>
@@ -731,14 +731,14 @@ const detectDestination = (event: CalendarEvent): string | null => {
                       {/* New Items */}
                       {outfit.outfit_data?.new_items?.length > 0 && (
                         <div className="mb-6">
-                          <h3 className="font-medium text-rose-600 mb-3">✨ Suggested New Items:</h3>
+                          <h3 className="font-medium text-dark-taupe mb-3">✨ Suggested New Items:</h3>
                           <div className="space-y-3">
                             {outfit.outfit_data.new_items.map((item: any, idx: number) => (
-                              <div key={idx} className="p-4 bg-rose-50 rounded-xl border border-rose-100">
-                                <p className="font-medium">{item.description}</p>
-                                <p className="text-sm text-gray-600">{item.category} • {item.color}</p>
+                              <div key={idx} className="p-4 bg-blush/30 rounded-2xl border border-taupe/10">
+                                <p className="font-medium text-dark-taupe">{item.description}</p>
+                                <p className="text-sm text-warm-grey">{item.category} • {item.color}</p>
                                 {item.estimated_price && (
-                                  <p className="text-sm text-rose-600 mt-1">{item.estimated_price}</p>
+                                  <p className="text-sm text-dark-taupe mt-1">{item.estimated_price}</p>
                                 )}
                               </div>
                             ))}
@@ -748,16 +748,16 @@ const detectDestination = (event: CalendarEvent): string | null => {
 
                       {/* Rationale */}
                       {outfit.outfit_data?.weather_rationale && (
-                        <div className="p-4 bg-blue-50 rounded-xl mb-4">
-                          <p className="text-sm text-blue-800">
+                        <div className="p-4 bg-taupe/20 rounded-2xl mb-4">
+                          <p className="text-sm text-dark-taupe">
                             🌤️ {outfit.outfit_data.weather_rationale}
                           </p>
                         </div>
                       )}
 
                       {outfit.outfit_data?.style_rationale && (
-                        <div className="p-4 bg-purple-50 rounded-xl mb-4">
-                          <p className="text-sm text-purple-800">
+                        <div className="p-4 bg-blush/30 rounded-2xl mb-4">
+                          <p className="text-sm text-dark-taupe">
                             ✨ {outfit.outfit_data.style_rationale}
                           </p>
                         </div>
@@ -766,8 +766,8 @@ const detectDestination = (event: CalendarEvent): string | null => {
                       {/* Styling Tips */}
                       {outfit.outfit_data?.styling_tips?.length > 0 && (
                         <div className="mb-6">
-                          <h3 className="font-medium mb-2">Styling Tips:</h3>
-                          <ul className="text-sm text-gray-600 space-y-1">
+                          <h3 className="font-medium mb-2 text-dark-taupe">Styling Tips:</h3>
+                          <ul className="text-sm text-warm-grey space-y-1">
                             {outfit.outfit_data.styling_tips.map((tip: string, idx: number) => (
                               <li key={idx}>• {tip}</li>
                             ))}
@@ -783,7 +783,7 @@ const detectDestination = (event: CalendarEvent): string | null => {
                   <button
                     onClick={saveSelectedOutfit}
                     disabled={savingOutfit}
-                    className="w-full px-4 py-3 bg-gradient-to-r from-rose-500 to-teal-500 text-white rounded-xl hover:opacity-90 transition disabled:opacity-50 flex items-center justify-center gap-2"
+                    className="w-full px-4 py-3 bg-blush text-dark-taupe rounded-full hover:bg-blush/80 transition disabled:opacity-50 flex items-center justify-center gap-2 shadow-sm"
                   >
                     {savingOutfit ? (
                       <>
@@ -799,7 +799,7 @@ const detectDestination = (event: CalendarEvent): string | null => {
                   </button>
                   <button
                     onClick={() => setShowResultsModal(false)}
-                    className="w-full px-4 py-3 bg-gray-100 rounded-xl hover:bg-gray-200 transition"
+                    className="w-full px-4 py-3 bg-cream rounded-full hover:bg-taupe/20 transition text-dark-taupe"
                   >
                     Keep Looking
                   </button>
