@@ -346,25 +346,25 @@ export default function GenerateOutfitPage() {
                   >
                     <ChevronLeft className="w-6 h-6 text-dark-taupe" />
                   </button>
-                  
+
                   <div className="text-center">
-                    <h3 className="text-xl font-bold text-gray-800">{currentOutfit.label}</h3>
-                    <p className="text-sm text-gray-500">
+                    <h3 className="text-xl font-medium text-dark-taupe">{currentOutfit.label}</h3>
+                    <p className="text-sm text-warm-grey">
                       Option {currentOutfitIndex + 1} of {outfitOptions.length}
                     </p>
                   </div>
 
                   <button
                     onClick={nextOutfit}
-                    className="p-2 hover:bg-gray-100 rounded-full transition"
+                    className="p-3 hover:bg-taupe/20 rounded-full transition-colors"
                   >
-                    <ChevronRight className="w-6 h-6" />
+                    <ChevronRight className="w-6 h-6 text-dark-taupe" />
                   </button>
                 </div>
 
                 {/* Formality Badge */}
                 <div className="flex justify-center mb-4">
-                  <span className="text-sm font-medium text-purple-600 bg-purple-50 px-3 py-1 rounded-full">
+                  <span className="text-sm font-medium text-dark-taupe bg-blush/30 px-3 py-1 rounded-full">
                     {getFormalityLabel(currentOutfit.outfit_data.formality_level || formalityLevel)}
                   </span>
                 </div>
@@ -372,16 +372,16 @@ export default function GenerateOutfitPage() {
                 {/* Closet Items */}
                 {currentOutfit.outfit_data.closet_items && currentOutfit.outfit_data.closet_items.length > 0 && (
                   <div className="mb-4">
-                    <p className="text-sm font-semibold text-gray-600 mb-2">From Your Closet:</p>
+                    <p className="text-sm font-medium text-warm-grey mb-2">From Your Closet:</p>
                     <div className="grid grid-cols-3 gap-2">
                       {currentOutfit.outfit_data.closet_items.map((item: any) => (
                         <div key={item.id} className="relative">
                           <img
                             src={item.image_url}
                             alt={item.name}
-                            className="w-full aspect-[4/5] object-cover rounded-lg"
+                            className="w-full aspect-[4/5] object-cover rounded-2xl border border-taupe/10"
                           />
-                          <p className="text-xs text-center mt-1 truncate">{item.name}</p>
+                          <p className="text-xs text-center mt-1 truncate text-dark-taupe">{item.name}</p>
                         </div>
                       ))}
                     </div>
@@ -391,18 +391,18 @@ export default function GenerateOutfitPage() {
                 {/* New Items */}
                 {currentOutfit.outfit_data.new_items && currentOutfit.outfit_data.new_items.length > 0 && (
                   <div className="mb-4">
-                    <p className="text-sm font-semibold text-teal-600 mb-2">✨ Suggested New Items:</p>
+                    <p className="text-sm font-medium text-dark-taupe mb-2">✨ Suggested New Items:</p>
                     <div className="space-y-2">
                       {currentOutfit.outfit_data.new_items.map((item: any, i: number) => (
-                        <div key={i} className="bg-teal-50 p-3 rounded-lg border border-teal-100">
-                          <p className="font-medium text-sm text-gray-800">{item.description}</p>
+                        <div key={i} className="bg-blush/30 p-3 rounded-2xl border border-taupe/10">
+                          <p className="font-medium text-sm text-dark-taupe">{item.description}</p>
                           <div className="flex justify-between items-center mt-1">
-                            <p className="text-xs text-gray-500 capitalize">{item.category} • {item.color}</p>
+                            <p className="text-xs text-warm-grey capitalize">{item.category} • {item.color}</p>
                             {item.estimated_price && (
-                              <p className="text-xs font-medium text-teal-600">{item.estimated_price}</p>
+                              <p className="text-xs font-medium text-dark-taupe">{item.estimated_price}</p>
                             )}
                           </div>
-                          <p className="text-xs text-gray-500 mt-1">{item.reasoning}</p>
+                          <p className="text-xs text-warm-grey mt-1">{item.reasoning}</p>
                         </div>
                       ))}
                     </div>
@@ -411,8 +411,8 @@ export default function GenerateOutfitPage() {
 
                 {/* Weather Rationale */}
                 {currentOutfit.outfit_data.weather_rationale && (
-                  <div className="bg-blue-50 p-3 rounded-lg mb-3">
-                    <p className="text-sm text-blue-800">
+                  <div className="bg-taupe/20 p-3 rounded-2xl mb-3">
+                    <p className="text-sm text-dark-taupe">
                       🌤️ {currentOutfit.outfit_data.weather_rationale}
                     </p>
                   </div>
@@ -420,8 +420,8 @@ export default function GenerateOutfitPage() {
 
                 {/* Style Rationale */}
                 {currentOutfit.outfit_data.style_rationale && (
-                  <div className="bg-purple-50 p-3 rounded-lg mb-3">
-                    <p className="text-sm text-purple-800">
+                  <div className="bg-blush/30 p-3 rounded-2xl mb-3">
+                    <p className="text-sm text-dark-taupe">
                       ✨ {currentOutfit.outfit_data.style_rationale}
                     </p>
                   </div>
@@ -429,12 +429,12 @@ export default function GenerateOutfitPage() {
 
                 {/* Styling Tips */}
                 {currentOutfit.outfit_data.styling_tips && currentOutfit.outfit_data.styling_tips.length > 0 && (
-                  <div className="border-t border-gray-100 pt-3 mt-3">
-                    <p className="text-sm font-semibold text-gray-600 mb-2">Styling Tips:</p>
+                  <div className="border-t border-taupe/20 pt-3 mt-3">
+                    <p className="text-sm font-medium text-warm-grey mb-2">Styling Tips:</p>
                     <ul className="space-y-1">
                       {currentOutfit.outfit_data.styling_tips.map((tip: string, i: number) => (
-                        <li key={i} className="text-sm text-gray-600 flex items-start gap-2">
-                          <span className="text-rose-500">•</span>
+                        <li key={i} className="text-sm text-dark-taupe flex items-start gap-2">
+                          <span className="text-blush">•</span>
                           {tip}
                         </li>
                       ))}
@@ -444,20 +444,20 @@ export default function GenerateOutfitPage() {
               </div>
 
               {/* Actions */}
-              <div className="border-t border-gray-100 p-4 flex gap-3">
+              <div className="border-t border-taupe/20 p-4 flex gap-3">
                 <button
                   onClick={() => {
                     setStep('setup')
                     setOutfitOptions([])
                   }}
-                  className="flex-1 px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition font-medium"
+                  className="flex-1 px-4 py-3 border border-taupe/30 bg-cream rounded-full hover:bg-taupe/20 transition font-medium text-dark-taupe"
                 >
                   Generate New Options
                 </button>
                 <button
                   onClick={saveSelectedOutfit}
                   disabled={savingOutfit}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-rose-500 to-teal-500 text-white rounded-lg hover:opacity-90 transition font-medium disabled:opacity-50"
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-blush text-dark-taupe rounded-full hover:bg-blush/80 transition font-medium disabled:opacity-50 shadow-sm"
                 >
                   {savingOutfit ? (
                     <>
@@ -475,7 +475,7 @@ export default function GenerateOutfitPage() {
             </div>
 
             {/* Swipe Hint */}
-            <p className="text-center text-sm text-gray-500">
+            <p className="text-center text-sm text-warm-grey">
               ← Swipe or use arrows to see other options →
             </p>
           </div>
