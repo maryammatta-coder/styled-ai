@@ -372,7 +372,7 @@ function isItemAppropriateForFormality(item: ClosetItem, formalityLevel: number)
       return false // Mini dresses tend to be dressy unless explicitly casual
     }
   }
-  
+
   // For CASUAL, reject dressy items AND club/party items
   if (formality === 'casual') {
     // Reject dressy/party tops
@@ -403,11 +403,18 @@ function isItemAppropriateForFormality(item: ClosetItem, formalityLevel: number)
     }
   }
 
-  // For SMART CASUAL, reject items that are TOO formal
-  // But allow mixing casual and dressy pieces
+  // For SMART CASUAL, reject items that are TOO formal OR too casual
   if (formality === 'smartCasual') {
-    // FIRST: Block ALL maxi dresses regardless of category detection
-    if (name.includes('maxi')) return false
+    // Block TOO CASUAL items
+    if (name.includes('denim shorts') || (name.includes('denim') && name.includes('short'))) return false // Denim shorts are too casual for smart casual
+    if (name.includes('jean shorts')) return false
+    if (name.includes('tube top')) return false // Tube tops are too casual/clubby
+    if (name.includes('strapless') && category === 'top') return false // Strapless tops too casual
+    if (name.includes('athletic')) return false
+    if (name.includes('sweatpant') || name.includes('jogger')) return false
+
+    // Block TOO FORMAL items
+    if (name.includes('maxi')) return false // Maxi dresses/skirts too formal
 
     // Reject fancy formal dresses
     if (category === 'dress') {
@@ -423,27 +430,40 @@ function isItemAppropriateForFormality(item: ClosetItem, formalityLevel: number)
     if (name.includes('cocktail')) return false
   }
 
+  // For DRESSY, reject items that are too casual
+  if (formality === 'dressy') {
+    if (name.includes('denim shorts') || (name.includes('denim') && name.includes('short'))) return false
+    if (name.includes('jean shorts')) return false
+    if (name.includes('t-shirt') || name.includes('tee ')) return false
+    if (name.includes('athletic')) return false
+    if (name.includes('sweatpant') || name.includes('jogger')) return false
+  }
+
   // For FORMAL, reject casual items
   if (formality === 'formal') {
+    if (name.includes('shorts')) return false // NO shorts for formal
     if (name.includes('t-shirt') || name.includes('tee ')) return false
     if (name.includes('casual')) return false
     if (name.includes('athletic') || name.includes('sports')) return false
     if (name.includes('hoodie') || name.includes('sweatshirt')) return false
     if (name.includes('denim') && category === 'bottom') return false
   }
-  
+
   return true
 }
 function doColorsClash(color1: string, color2: string): boolean {
   const c1 = (color1 || '').toLowerCase()
   const c2 = (color2 || '').toLowerCase()
-  
+
   // Neutrals go with everything
   const neutrals = ['black', 'white', 'gray', 'grey', 'beige', 'cream', 'tan', 'brown', 'navy', 'nude', 'camel']
-  if (neutrals.some(n => c1.includes(n)) || neutrals.some(n => c2.includes(n))) {
+  const isC1Neutral = neutrals.some(n => c1.includes(n))
+  const isC2Neutral = neutrals.some(n => c2.includes(n))
+
+  if (isC1Neutral || isC2Neutral) {
     return false // No clash with neutrals
   }
-  
+
   // Check for known clashing combinations
   const clashes = [
     ['purple', 'blue'],
@@ -451,16 +471,47 @@ function doColorsClash(color1: string, color2: string): boolean {
     ['red', 'orange'],
     ['green', 'blue'],
     ['orange', 'pink'],
+    ['burgundy', 'beige'],  // Burgundy doesn't work well with beige
+    ['burgundy', 'denim'],  // Burgundy and denim clash
   ]
-  
+
   for (const [clash1, clash2] of clashes) {
-    if ((c1.includes(clash1) && c2.includes(clash2)) || 
+    if ((c1.includes(clash1) && c2.includes(clash2)) ||
         (c1.includes(clash2) && c2.includes(clash1))) {
       return true // Colors clash
     }
   }
-  
+
   return false
+}
+
+function getColorHarmonyScore(items: ClosetItem[]): number {
+  // Score outfit based on color harmony (higher = better)
+  // Prefer neutral + accent color over multiple bright colors
+  let score = 100
+
+  const colors = items.map(i => (i.color || '').toLowerCase())
+  const neutrals = ['black', 'white', 'gray', 'grey', 'beige', 'cream', 'tan', 'brown', 'navy', 'nude', 'camel']
+
+  const neutralCount = colors.filter(c => neutrals.some(n => c.includes(n))).length
+  const brightCount = colors.length - neutralCount
+
+  // Ideal: mostly neutrals with 0-1 accent colors
+  if (brightCount === 0) score += 20 // All neutral = very safe
+  if (brightCount === 1) score += 30 // Neutral + 1 accent = perfect
+  if (brightCount === 2) score -= 20 // 2 bright colors = risky
+  if (brightCount >= 3) score -= 50 // 3+ bright colors = usually bad
+
+  // Check for clashes
+  for (let i = 0; i < colors.length; i++) {
+    for (let j = i + 1; j < colors.length; j++) {
+      if (doColorsClash(colors[i], colors[j])) {
+        score -= 40 // Heavy penalty for clashing colors
+      }
+    }
+  }
+
+  return score
 }
 
 function getItemVibe(item: ClosetItem): string[] {
@@ -680,6 +731,12 @@ export async function POST(request: NextRequest) {
 
     const prompt = `You are a professional fashion stylist creating ${count} outfits.
 
+🎯 PRIMARY GOAL: CREATE COHESIVE, WEARABLE OUTFITS
+- Prioritize outfit cohesion over variety
+- Match colors carefully - prefer neutrals with 0-1 accent color
+- Choose items that work together stylistically
+- When in doubt, pick black/neutral shoes and bags for better coordination
+
 ## CONTEXT
 - Occasion: ${occasion}
 - Formality: ${formalityCat.toUpperCase()} (${formalityRules.description})
@@ -726,19 +783,37 @@ ${temperature < 50 ? '\n⚠️ IMPORTANT: If using a dress in this cold weather,
 BAGS/PURSES (ALWAYS REQUIRED - MANDATORY FOR EVERY OUTFIT):
 ${appropriate.bags.length > 0 ? formatItems(appropriate.bags) : '⚠️ NO BAGS IN CLOSET - You MUST suggest a new bag in new_items for EVERY outfit!'}
 
-## STRICT RULES
-1. 🚨 BAGS ARE MANDATORY: EVERY outfit MUST include a bag/purse. ${appropriate.bags.length === 0 ? 'Since there are NO bags in the closet, you MUST suggest a new bag in new_items for EVERY outfit (even for closet-only outfits).' : 'Use a bag from the BAGS list above.'}
-2. 🚨 SHOE RULES - ABSOLUTELY CRITICAL:
+## STRICT RULES - PRIORITIZE COHESION OVER VARIETY
+
+1. 🎯 COHESION IS PARAMOUNT: Create outfits that actually work together. Don't force variety at the expense of good style. When in doubt, choose neutral/black accessories.
+
+2. 🚨 COLOR RULES:
+   - IDEAL: Mostly neutral colors (black, white, beige, navy, brown, gray) + 0-1 accent color
+   - AVOID: Multiple bright colors in one outfit (burgundy + denim, red + blue, etc.)
+   - NEVER: burgundy with beige, burgundy with denim, purple with blue, red with pink
+   - SAFE BETS: Black shoes/bag work with almost everything. When uncertain, choose black.
+   - If dress is beige/cream/tan → choose black, brown, or tan accessories (NOT burgundy, NOT bright colors)
+   - If dress is bright color → choose neutral accessories
+
+3. 🚨 BAGS ARE MANDATORY: EVERY outfit MUST include a bag/purse. ${appropriate.bags.length === 0 ? 'Since there are NO bags in the closet, you MUST suggest a new bag in new_items for EVERY outfit (even for closet-only outfits).' : 'Use a bag from the BAGS list above. Prefer neutral bags for better coordination.'}
+
+4. 🚨 SHOE RULES - ABSOLUTELY CRITICAL:
    ${formalityCat === 'casual' ? '- CASUAL/VERY CASUAL = NO HEELS WHATSOEVER. Only sneakers, flats, loafers, slides, or flat sandals allowed!' : ''}
-   ${formalityCat === 'smartCasual' || formalityCat === 'dressy' || formalityCat === 'formal' ? '- SMART CASUAL/DRESSY/FORMAL = NO SNEAKERS (exception: only clean/minimal sneakers OK for smart casual)' : ''}
-3. DRESS outfit = dress + shoes + BAG ${temperature < 50 ? '+ OUTERWEAR (required for cold!)' : '(NO tops, NO pants)'}
-4. TOP+BOTTOM outfit = 1 top + 1 bottom + 1 shoes + BAG ${temperature < 50 ? '+ outerwear if needed' : ''}
-5. Only use IDs from the lists above
-6. ${itemSource === 'closet' ? 'new_items must be [] UNLESS suggesting a bag (bags are mandatory even for closet-only)' : ''}
-7. ${temperature >= 70 ? 'NO long sleeves, NO sweaters, NO ribbed - too warm!' : temperature < 50 ? 'COLD WEATHER: MUST add outerwear if wearing a dress! For casual occasions, prefer pants over dresses in cold weather.' : ''}
-8. ${user.avoid_colors && user.avoid_colors.length > 0 ? `🚫 CRITICAL: NEVER use items in these colors: ${user.avoid_colors.join(', ')}. These are RED FLAGS - completely avoid them!` : ''}
-9. COLOR COORDINATION: Don't pair purple with blue, red with pink, or orange with green. Neutrals (black, white, beige, gray) go with everything. ${user.color_palette && user.color_palette.length > 0 ? `Client likes ${user.color_palette.join(', ')} but don't force - prioritize style and occasion first.` : ''}
-10. STYLE COHESION FOR CASUAL: Athletic/designer sneakers (Yeezys, Jordans) should be paired with athleisure or street-casual (joggers, hoodies, casual tees), NOT with mini skirts, denim skirts, or dressy tops. Keep casual outfits simple and cohesive - no mixing streetwear with dressy pieces!
+   ${formalityCat === 'smartCasual' || formalityCat === 'dressy' || formalityCat === 'formal' ? '- SMART CASUAL/DRESSY/FORMAL = NO SNEAKERS (exception: only clean/minimal sneakers OK for smart casual). NO DENIM SHORTS - they are too casual!' : ''}
+
+5. DRESS outfit = dress + shoes + BAG ${temperature < 50 ? '+ OUTERWEAR (required for cold!)' : '(NO tops, NO pants)'}
+
+6. TOP+BOTTOM outfit = 1 top + 1 bottom + 1 shoes + BAG ${temperature < 50 ? '+ outerwear if needed' : ''}
+
+7. Only use IDs from the lists above
+
+8. ${itemSource === 'closet' ? 'new_items must be [] UNLESS suggesting a bag (bags are mandatory even for closet-only)' : ''}
+
+9. ${temperature >= 70 ? 'NO long sleeves, NO sweaters, NO ribbed - too warm!' : temperature < 50 ? 'COLD WEATHER: MUST add outerwear if wearing a dress! For casual occasions, prefer pants over dresses in cold weather.' : ''}
+
+10. ${user.avoid_colors && user.avoid_colors.length > 0 ? `🚫 CRITICAL: NEVER use items in these colors: ${user.avoid_colors.join(', ')}. These are RED FLAGS - completely avoid them!` : ''}
+
+11. STYLE COHESION: Keep the vibe consistent. Athletic sneakers go with athleisure, NOT with dressy pieces. Linen shorts with heels OK for daytime, denim shorts NEVER for smart casual or dressy.
 
 ## RESPONSE (JSON only)
 {
@@ -761,15 +836,27 @@ Create ${count} DIFFERENT outfits. Every outfit MUST have shoes AND a bag!`
       messages: [
         {
           role: 'system',
-          content: `You are an expert fashion stylist. Critical rules:
-1. ALWAYS include shoes
-2. SHOE RULES (NEVER BREAK THESE):
-   - CASUAL/VERY CASUAL = NO HEELS EVER. Only: sneakers, flats, loafers, slides, flat sandals
-   - SMART CASUAL/DRESSY/FORMAL = NO SNEAKERS (exception: clean/minimal sneakers OK for smart casual only)
-3. ${formalityCat === 'casual' ? 'CASUAL = appropriate casual tops (t-shirt, tank, casual blouse - NO strapless/tube/corset/lace tops) + jeans/casual pants/skirt + FLAT SHOES (sneakers/flats/loafers). OR simple casual dress + sneakers. NO HEELS! NO clubby/dressy items! Keep it simple and wearable.' : formalityCat === 'smartCasual' ? 'SMART CASUAL = MIX casual and elevated pieces. NO SNEAKERS (exception: clean/minimal sneakers OK). Examples: tank+jeans+heels, dressy top+shorts+flats. NEVER tank+shorts+sneakers (all casual) or dress+heels (all dressy).' : formalityCat === 'formal' ? 'FORMAL = elegant dresses + heels (NO SNEAKERS)' : 'Match shoes to formality'}
-4. ${temperature >= 70 ? 'WARM: No long sleeves, no sweaters, no ribbed, no heavy fabrics!' : temperature < 50 ? 'COLD (' + temperature + '°F): Add warm outerwear! If dress, MUST include coat/jacket. Prefer long pants for casual. Closed-toe shoes only.' : ''}
-5. Dress = complete outfit (no extra top/bottom)
-6. Only use provided IDs`
+          content: `You are an expert fashion stylist. Your PRIMARY GOAL is creating COHESIVE, WEARABLE outfits.
+
+CRITICAL RULES:
+1. COHESION OVER VARIETY: Don't force variety if it sacrifices good style. Choose items that work together.
+
+2. COLOR COORDINATION:
+   - IDEAL: Neutral colors + 0-1 accent color
+   - When in doubt, choose BLACK or NEUTRAL accessories (shoes, bags)
+   - NEVER: burgundy with beige, burgundy with denim, bright colors that clash
+   - Beige/cream dress → black, brown, or tan accessories (NOT burgundy!)
+
+3. SHOE RULES (NEVER BREAK):
+   - CASUAL = NO HEELS. Only: sneakers, flats, loafers, slides
+   - SMART CASUAL/DRESSY/FORMAL = NO SNEAKERS (exception: clean minimal sneakers for smart casual)
+   - SMART CASUAL/DRESSY = NO DENIM SHORTS
+
+4. ${formalityCat === 'casual' ? 'CASUAL = t-shirt/tank/casual top + jeans/pants + FLAT SHOES. OR casual dress + sneakers. NO HEELS! Keep simple.' : formalityCat === 'smartCasual' ? 'SMART CASUAL = NO DENIM SHORTS. NO TUBE TOPS. Mix elevated + casual: tank+jeans+heels OR dressy top+linen shorts+heels. NOT denim shorts!' : formalityCat === 'formal' ? 'FORMAL = elegant dress + heels (NO SNEAKERS, NO SHORTS)' : 'Match shoes to formality'}
+
+5. ${temperature >= 70 ? 'WARM: No long sleeves, no sweaters, no ribbed!' : temperature < 50 ? 'COLD: Add outerwear! Prefer pants for casual.' : ''}
+
+6. Only use provided item IDs. Dress = complete outfit (no extra top/bottom).`
         },
         { role: 'user', content: prompt }
       ],
