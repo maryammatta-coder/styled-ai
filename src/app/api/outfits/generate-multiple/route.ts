@@ -301,17 +301,37 @@ function isShoeAppropriateForFormality(item: ClosetItem, formalityLevel: number)
   const name = (item.name || '').toLowerCase()
   const formality = getFormalityCategory(formalityLevel)
 
-  // For casual, reject ALL heels - absolutely no exceptions
+  // For casual (includes very casual 0-40), reject ALL heels - absolutely no exceptions
   if (formality === 'casual') {
     // ANY mention of heel = not casual
     if (name.includes('heel')) return false
     if (name.includes('stiletto')) return false
     if (name.includes('pump')) return false
     if (name.includes('wedge')) return false
-    if (name.includes('slingback')) return false
-    if (name.includes('strappy')) return false
-    if (name.includes('platform') && !name.includes('sneaker')) return false
+    if (name.includes('slingback') && name.includes('heel')) return false
+    if (name.includes('strappy') && name.includes('heel')) return false
+    if (name.includes('platform') && name.includes('heel')) return false
+    if (name.includes('kitten heel')) return false
+    if (name.includes('block heel')) return false
     // Only allow: sneakers, flats, loafers, slides, sandals (flat), boots (flat)
+  }
+
+  // Smart casual, dressy, formal: NO SNEAKERS
+  if (formality === 'smartCasual' || formality === 'dressy' || formality === 'formal') {
+    if (name.includes('sneaker')) return false
+    if (name.includes('athletic')) return false
+    if (name.includes('running shoe')) return false
+    if (name.includes('tennis shoe')) return false
+    if (name.includes('trainer')) return false
+    // Exception: "clean white sneakers" or "minimal sneakers" are OK ONLY for smart casual
+    if (formality === 'smartCasual') {
+      if ((name.includes('clean') || name.includes('minimal') || name.includes('leather')) &&
+          name.includes('sneaker')) {
+        // Allow clean/minimal sneakers for smart casual only
+      } else if (name.includes('sneaker')) {
+        return false  // Regular sneakers not allowed
+      }
+    }
   }
 
   // Smart casual: filter out nighttime/party heels but allow daytime dressy shoes
@@ -323,12 +343,11 @@ function isShoeAppropriateForFormality(item: ClosetItem, formalityLevel: number)
     if (name.includes('strappy') && name.includes('heel')) return false  // Strappy heels are too nighttime
     if (name.includes('stiletto')) return false  // Stilettos are too formal/nighttime
     if (name.includes('combat')) return false  // Combat boots are too casual
-    // Allow: wedges, kitten heels, block heels, mules, slingbacks, loafers, clean sneakers, ankle boots, flats
+    // Allow: wedges, kitten heels, block heels, mules, slingbacks, loafers, ankle boots, flats
   }
 
   // For formal, reject casual shoes
   if (formality === 'formal') {
-    if (name.includes('sneaker')) return false
     if (name.includes('flat') && !name.includes('ballet')) return false
     if (name.includes('loafer')) return false
     if (name.includes('combat')) return false
@@ -678,6 +697,10 @@ FORBIDDEN: ${weatherRules.forbidden.join(', ')}
 
 ## FORMALITY RULES
 ${outfitStructure}
+
+SHOE RULES (CRITICAL - NEVER VIOLATE):
+${formalityCat === 'casual' ? '🚨 CASUAL/VERY CASUAL = ABSOLUTELY NO HEELS. Period. Use: sneakers, flats, loafers, slides, sandals (flat only)' : ''}
+${formalityCat === 'smartCasual' || formalityCat === 'dressy' || formalityCat === 'formal' ? '🚨 SMART CASUAL/DRESSY/FORMAL = ABSOLUTELY NO SNEAKERS (exception: clean/minimal sneakers OK for smart casual only)' : ''}
 Good shoe types: ${formalityRules.shoeTypes.join(', ')}
 Avoid shoes: ${formalityRules.avoidShoes.join(', ')}
 Examples: ${formalityRules.examples.join(' | ')}
@@ -705,16 +728,17 @@ ${appropriate.bags.length > 0 ? formatItems(appropriate.bags) : '⚠️ NO BAGS 
 
 ## STRICT RULES
 1. 🚨 BAGS ARE MANDATORY: EVERY outfit MUST include a bag/purse. ${appropriate.bags.length === 0 ? 'Since there are NO bags in the closet, you MUST suggest a new bag in new_items for EVERY outfit (even for closet-only outfits).' : 'Use a bag from the BAGS list above.'}
-2. EVERY outfit MUST include SHOES
+2. 🚨 SHOE RULES - ABSOLUTELY CRITICAL:
+   ${formalityCat === 'casual' ? '- CASUAL/VERY CASUAL = NO HEELS WHATSOEVER. Only sneakers, flats, loafers, slides, or flat sandals allowed!' : ''}
+   ${formalityCat === 'smartCasual' || formalityCat === 'dressy' || formalityCat === 'formal' ? '- SMART CASUAL/DRESSY/FORMAL = NO SNEAKERS (exception: only clean/minimal sneakers OK for smart casual)' : ''}
 3. DRESS outfit = dress + shoes + BAG ${temperature < 50 ? '+ OUTERWEAR (required for cold!)' : '(NO tops, NO pants)'}
 4. TOP+BOTTOM outfit = 1 top + 1 bottom + 1 shoes + BAG ${temperature < 50 ? '+ outerwear if needed' : ''}
 5. Only use IDs from the lists above
 6. ${itemSource === 'closet' ? 'new_items must be [] UNLESS suggesting a bag (bags are mandatory even for closet-only)' : ''}
-7. ${formalityCat === 'casual' ? 'NO heels/stilettos - use sneakers, flats, loafers! NO lace, satin, or midi dresses!' : ''}
-8. ${temperature >= 70 ? 'NO long sleeves, NO sweaters, NO ribbed - too warm!' : temperature < 50 ? 'COLD WEATHER: MUST add outerwear if wearing a dress! For casual occasions, prefer pants over dresses in cold weather.' : ''}
-9. ${user.avoid_colors && user.avoid_colors.length > 0 ? `🚫 CRITICAL: NEVER use items in these colors: ${user.avoid_colors.join(', ')}. These are RED FLAGS - completely avoid them!` : ''}
-10. COLOR COORDINATION: Don't pair purple with blue, red with pink, or orange with green. Neutrals (black, white, beige, gray) go with everything. ${user.color_palette && user.color_palette.length > 0 ? `Client likes ${user.color_palette.join(', ')} but don't force - prioritize style and occasion first.` : ''}
-11. STYLE COHESION FOR CASUAL: Athletic/designer sneakers (Yeezys, Jordans) should be paired with athleisure or street-casual (joggers, hoodies, casual tees), NOT with mini skirts, denim skirts, or dressy tops. Keep casual outfits simple and cohesive - no mixing streetwear with dressy pieces!
+7. ${temperature >= 70 ? 'NO long sleeves, NO sweaters, NO ribbed - too warm!' : temperature < 50 ? 'COLD WEATHER: MUST add outerwear if wearing a dress! For casual occasions, prefer pants over dresses in cold weather.' : ''}
+8. ${user.avoid_colors && user.avoid_colors.length > 0 ? `🚫 CRITICAL: NEVER use items in these colors: ${user.avoid_colors.join(', ')}. These are RED FLAGS - completely avoid them!` : ''}
+9. COLOR COORDINATION: Don't pair purple with blue, red with pink, or orange with green. Neutrals (black, white, beige, gray) go with everything. ${user.color_palette && user.color_palette.length > 0 ? `Client likes ${user.color_palette.join(', ')} but don't force - prioritize style and occasion first.` : ''}
+10. STYLE COHESION FOR CASUAL: Athletic/designer sneakers (Yeezys, Jordans) should be paired with athleisure or street-casual (joggers, hoodies, casual tees), NOT with mini skirts, denim skirts, or dressy tops. Keep casual outfits simple and cohesive - no mixing streetwear with dressy pieces!
 
 ## RESPONSE (JSON only)
 {
@@ -739,10 +763,13 @@ Create ${count} DIFFERENT outfits. Every outfit MUST have shoes AND a bag!`
           role: 'system',
           content: `You are an expert fashion stylist. Critical rules:
 1. ALWAYS include shoes
-2. ${formalityCat === 'casual' ? 'CASUAL = appropriate casual tops (t-shirt, tank, casual blouse - NO strapless/tube/corset/lace tops) + jeans/casual pants/skirt + sneakers/flats/loafers. OR simple casual dress + sneakers. NO heels! NO clubby/dressy items! Keep it simple and wearable.' : formalityCat === 'smartCasual' ? 'SMART CASUAL = MIX casual and elevated pieces. Examples: tank+jeans+heels, dressy top+shorts+slides, mini dress+sneakers. NEVER tank+shorts+sneakers (all casual) or dress+heels (all dressy).' : formalityCat === 'formal' ? 'FORMAL = elegant dresses + heels' : 'Match shoes to formality'}
-3. ${temperature >= 70 ? 'WARM: No long sleeves, no sweaters, no ribbed, no heavy fabrics!' : temperature < 50 ? 'COLD (' + temperature + '°F): Add warm outerwear! If dress, MUST include coat/jacket. Prefer long pants for casual. Closed-toe shoes only.' : ''}
-4. Dress = complete outfit (no extra top/bottom)
-5. Only use provided IDs`
+2. SHOE RULES (NEVER BREAK THESE):
+   - CASUAL/VERY CASUAL = NO HEELS EVER. Only: sneakers, flats, loafers, slides, flat sandals
+   - SMART CASUAL/DRESSY/FORMAL = NO SNEAKERS (exception: clean/minimal sneakers OK for smart casual only)
+3. ${formalityCat === 'casual' ? 'CASUAL = appropriate casual tops (t-shirt, tank, casual blouse - NO strapless/tube/corset/lace tops) + jeans/casual pants/skirt + FLAT SHOES (sneakers/flats/loafers). OR simple casual dress + sneakers. NO HEELS! NO clubby/dressy items! Keep it simple and wearable.' : formalityCat === 'smartCasual' ? 'SMART CASUAL = MIX casual and elevated pieces. NO SNEAKERS (exception: clean/minimal sneakers OK). Examples: tank+jeans+heels, dressy top+shorts+flats. NEVER tank+shorts+sneakers (all casual) or dress+heels (all dressy).' : formalityCat === 'formal' ? 'FORMAL = elegant dresses + heels (NO SNEAKERS)' : 'Match shoes to formality'}
+4. ${temperature >= 70 ? 'WARM: No long sleeves, no sweaters, no ribbed, no heavy fabrics!' : temperature < 50 ? 'COLD (' + temperature + '°F): Add warm outerwear! If dress, MUST include coat/jacket. Prefer long pants for casual. Closed-toe shoes only.' : ''}
+5. Dress = complete outfit (no extra top/bottom)
+6. Only use provided IDs`
         },
         { role: 'user', content: prompt }
       ],
