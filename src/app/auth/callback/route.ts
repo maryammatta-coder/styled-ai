@@ -4,11 +4,12 @@ import { NextResponse } from 'next/server'
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url)
   const code = requestUrl.searchParams.get('code')
+  const next = requestUrl.searchParams.get('next') || '/dashboard'
 
   if (code) {
     const supabase = await createClient()
     const { data, error } = await supabase.auth.exchangeCodeForSession(code)
-    
+
     if (!error && data.user) {
       // Check if user profile exists
       const { data: existingUser } = await supabase
@@ -19,7 +20,7 @@ export async function GET(request: Request) {
 
       // If no profile exists, create one and redirect to onboarding
       if (!existingUser) {
-        await supabase.from('users').insert([
+        const { error: insertError } = await supabase.from('users').insert([
           {
             id: data.user.id,
             email: data.user.email,
@@ -32,14 +33,24 @@ export async function GET(request: Request) {
             plan_ahead_days: 2,
           },
         ])
+
+        if (insertError) {
+          console.error('Error creating user profile:', insertError)
+          return NextResponse.redirect(new URL('/login?error=profile_creation_failed', requestUrl.origin))
+        }
+
         return NextResponse.redirect(new URL('/onboarding', requestUrl.origin))
       }
 
-      // Existing user, go to dashboard
-      return NextResponse.redirect(new URL('/dashboard', requestUrl.origin))
+      // Existing user, go to dashboard or next URL
+      return NextResponse.redirect(new URL(next, requestUrl.origin))
     }
+
+    // Auth exchange failed
+    console.error('Auth error:', error)
+    return NextResponse.redirect(new URL('/login?error=auth_failed', requestUrl.origin))
   }
 
-  // Error or no code, redirect to login
-  return NextResponse.redirect(new URL('/login', requestUrl.origin))
+  // No code provided
+  return NextResponse.redirect(new URL('/login?error=no_code', requestUrl.origin))
 }

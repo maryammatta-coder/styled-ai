@@ -102,39 +102,39 @@ export default function OnboardingPage() {
 }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-rose-50 to-teal-50 p-4">
+    <div className="min-h-screen bg-cream p-4">
       <div className="max-w-2xl mx-auto pt-12">
-        <div className="bg-white rounded-2xl shadow-xl p-8">
+        <div className="bg-beige rounded-3xl shadow-sm border border-taupe/10 p-8">
           <div className="mb-6">
             <div className="flex justify-between items-center mb-4">
-              <span className="text-sm text-gray-500">Step {step + 1} of {questions.length}</span>
+              <span className="text-sm text-warm-grey tracking-wide">Step {step + 1} of {questions.length}</span>
               <div className="flex gap-1">
                 {questions.map((_, i) => (
-                  <div key={i} className={`h-2 w-12 rounded ${i <= step ? 'bg-rose-500' : 'bg-gray-200'}`} />
+                  <div key={i} className={`h-2 w-12 rounded-full ${i <= step ? 'bg-blush' : 'bg-taupe/30'}`} />
                 ))}
               </div>
             </div>
-            <h2 className="text-3xl font-bold text-gray-800 mb-2">{currentQ.title}</h2>
-            <p className="text-gray-600">{currentQ.subtitle}</p>
+            <h2 className="text-3xl font-light text-dark-taupe mb-2 tracking-wide">{currentQ.title}</h2>
+            <p className="text-warm-grey text-sm">{currentQ.subtitle}</p>
           </div>
 
           <div className="grid grid-cols-2 gap-3 mb-8">
             {currentQ.options.map((option) => {
-              const isSelected = currentQ.type === 'single' 
+              const isSelected = currentQ.type === 'single'
                 ? answers[currentQ.key as keyof typeof answers] === option
                 : (answers[currentQ.key as 'style_vibe' | 'color_palette' | 'avoid_colors'] || []).includes(option)
-              
+
               return (
                 <button
                   key={option}
                   onClick={() => toggleOption(option)}
-                  className={`p-4 rounded-lg border-2 transition ${
+                  className={`p-4 rounded-2xl border transition ${
                     isSelected
-                      ? 'border-rose-500 bg-rose-50'
-                      : 'border-gray-200 hover:border-gray-300'
+                      ? 'border-blush bg-blush/30 shadow-sm'
+                      : 'border-taupe/30 hover:border-taupe/50 bg-cream'
                   }`}
                 >
-                  <span className="font-medium text-gray-800">{option}</span>
+                  <span className="font-medium text-dark-taupe text-sm">{option}</span>
                 </button>
               )
             })}
@@ -143,7 +143,7 @@ export default function OnboardingPage() {
           <button
             onClick={handleNext}
             disabled={loading}
-            className="w-full bg-gradient-to-r from-rose-500 to-teal-500 text-white py-3 rounded-lg font-semibold hover:opacity-90 transition disabled:opacity-50"
+            className="w-full bg-blush text-dark-taupe py-3 rounded-full font-medium hover:bg-blush/80 transition disabled:opacity-50 shadow-sm tracking-wide"
           >
             {loading ? 'Saving...' : (step === questions.length - 1 ? 'Complete Setup' : 'Next')}
           </button>

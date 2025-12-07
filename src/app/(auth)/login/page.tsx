@@ -87,23 +87,23 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-rose-50 to-teal-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full">
+    <div className="min-h-screen bg-cream flex items-center justify-center p-4">
+      <div className="bg-beige rounded-3xl shadow-sm border border-taupe/10 p-8 max-w-md w-full">
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-rose-500 to-teal-500 bg-clip-text text-transparent mb-2">
-            styled.ai
+          <h1 className="text-4xl font-light tracking-[0.2em] text-dark-taupe mb-2">
+            STYLED.AI
           </h1>
-          <p className="text-gray-600">Your AI-powered personal stylist</p>
+          <p className="text-warm-grey text-sm tracking-wide">Your AI-powered personal stylist</p>
         </div>
 
         {/* Google Sign-In Button */}
         <button
           onClick={handleGoogleSignIn}
           disabled={googleLoading}
-          className="w-full flex items-center justify-center gap-3 bg-white border border-gray-300 text-gray-700 py-3 px-4 rounded-lg font-medium hover:bg-gray-50 transition disabled:opacity-50 mb-6"
+          className="w-full flex items-center justify-center gap-3 bg-white border border-taupe/30 text-dark-taupe py-3 px-4 rounded-full font-medium hover:bg-cream transition disabled:opacity-50 mb-6 shadow-sm"
         >
           {googleLoading ? (
-            <Loader2 className="w-5 h-5 animate-spin" />
+            <Loader2 className="w-5 h-5 animate-spin text-warm-grey" />
           ) : (
             <svg className="w-5 h-5" viewBox="0 0 24 24">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -112,16 +112,16 @@ export default function LoginPage() {
               <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
             </svg>
           )}
-          {googleLoading ? 'Signing in...' : 'Continue with Google'}
+          <span className="tracking-wide text-sm">{googleLoading ? 'Signing in...' : 'Continue with Google'}</span>
         </button>
 
         {/* Divider */}
         <div className="relative mb-6">
           <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-gray-300"></div>
+            <div className="w-full border-t border-taupe/20"></div>
           </div>
           <div className="relative flex justify-center text-sm">
-            <span className="px-2 bg-white text-gray-500">or continue with email</span>
+            <span className="px-3 bg-beige text-warm-grey">or continue with email</span>
           </div>
         </div>
 
@@ -132,7 +132,7 @@ export default function LoginPage() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent"
+            className="w-full px-4 py-3 border border-taupe/30 bg-cream rounded-full focus:ring-2 focus:ring-blush focus:border-transparent text-dark-taupe placeholder-warm-grey transition"
           />
           <input
             type="password"
@@ -140,11 +140,11 @@ export default function LoginPage() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent"
+            className="w-full px-4 py-3 border border-taupe/30 bg-cream rounded-full focus:ring-2 focus:ring-blush focus:border-transparent text-dark-taupe placeholder-warm-grey transition"
           />
-          
+
           {error && (
-            <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm">
+            <div className="bg-blush/30 text-dark-taupe p-3 rounded-2xl text-sm border border-taupe/20">
               {error}
             </div>
           )}
@@ -152,7 +152,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-gradient-to-r from-rose-500 to-teal-500 text-white py-3 rounded-lg font-semibold hover:opacity-90 transition disabled:opacity-50"
+            className="w-full bg-blush text-dark-taupe py-3 rounded-full font-medium hover:bg-blush/80 transition disabled:opacity-50 shadow-sm tracking-wide text-sm"
           >
             {loading ? 'Loading...' : (isSignUp ? 'Sign Up' : 'Log In')}
           </button>
@@ -160,7 +160,7 @@ export default function LoginPage() {
           <button
             type="button"
             onClick={() => setIsSignUp(!isSignUp)}
-            className="w-full text-gray-600 hover:text-gray-800"
+            className="w-full text-warm-grey hover:text-dark-taupe transition text-sm"
           >
             {isSignUp ? 'Already have an account? Log in' : "Don't have an account? Sign up"}
           </button>
