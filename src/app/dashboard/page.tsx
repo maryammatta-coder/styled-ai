@@ -118,7 +118,7 @@ export default function DashboardPage() {
           >
             <div className="p-4 rounded-full bg-beige border border-taupe/10 group-hover:bg-taupe/20 transition-colors">
               <svg className="w-6 h-6 text-dark-taupe" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v3m0 0a3 3 0 00-3 3v1m3-4a3 3 0 013 3v1m-6 0h6m-6 0l-3 9h12l-3-9" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 4v2M4 15l8-6 8 6M4 15v1a1 1 0 001 1h14a1 1 0 001-1v-1" />
               </svg>
             </div>
             <span className="text-sm font-medium text-dark-taupe tracking-wide">Closet</span>
