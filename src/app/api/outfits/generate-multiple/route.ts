@@ -415,6 +415,7 @@ function isItemAppropriateForFormality(item: ClosetItem, formalityLevel: number)
   // For CASUAL, reject dressy items AND club/party items
   if (formality === 'casual') {
     // Reject dressy/party tops
+    if (name.includes('bodysuit') || name.includes('body suit')) return false // Bodysuits are too put-together for casual
     if (name.includes('drape') || name.includes('draped')) return false
     if (name.includes('silk') && category === 'top') return false
     if (name.includes('satin')) return false
@@ -429,6 +430,9 @@ function isItemAppropriateForFormality(item: ClosetItem, formalityLevel: number)
 
     // Dressy sleeve styles
     if (name.includes('bell sleeve') || name.includes('puff sleeve') || name.includes('balloon sleeve')) return false
+
+    // Reject mini skirts for casual - they're too dressy/club
+    if (category === 'bottom' && name.includes('mini') && name.includes('skirt')) return false
 
     // Dressy dresses - NOT casual
     if (category === 'dress') {
@@ -776,6 +780,8 @@ export async function POST(request: NextRequest) {
 - Match colors carefully - prefer neutrals with 0-1 accent color
 - Choose items that work together stylistically
 - When in doubt, pick black/neutral shoes and bags for better coordination
+- DO NOT force variety - it's OK to use the same shoes or bag in multiple outfits if they're the best choice
+- Quality over variety - if white sneakers work best, use them for all 3 outfits
 
 ## CONTEXT
 - Occasion: ${occasion}
@@ -855,9 +861,11 @@ ${appropriate.bags.length > 0 ? formatItems(appropriate.bags) : '⚠️ NO BAGS 
 
 10. ${user.avoid_colors && user.avoid_colors.length > 0 ? `🚫 CRITICAL: NEVER use items in these colors: ${user.avoid_colors.join(', ')}. These are RED FLAGS - completely avoid them!` : ''}
 
-11. STYLE COHESION: Keep the vibe consistent. Athletic sneakers go with athleisure, NOT with dressy pieces. Linen shorts with heels OK for daytime, denim shorts NEVER for smart casual or dressy.
+11. STYLE COHESION: Keep the vibe consistent. Athletic/running shoes go with athletic wear ONLY, NEVER with bodysuits/skirts/dresses. Linen shorts with heels OK for daytime, denim shorts NEVER for smart casual or dressy.
 
-12. 🚨🚨🚨 BLACK BAG RULE (CRITICAL - READ CAREFULLY):
+12. DO NOT FORCE VARIETY: If white sneakers work best for all 3 outfits, use them for all 3. Don't use different shoes just for variety. Same for bags.
+
+13. 🚨🚨🚨 BLACK BAG RULE (CRITICAL - READ CAREFULLY):
    - If outfit has light blue + denim + white → DO NOT pick black bag, pick tan/denim/brown
    - If outfit is all white/cream/light colors → DO NOT pick black bag, pick tan/brown/nude
    - Black bags ONLY work with darker clothing (black, navy, dark colors)
@@ -887,9 +895,11 @@ Create ${count} DIFFERENT outfits. Every outfit MUST have shoes AND a bag!`
           content: `You are an expert fashion stylist. Your PRIMARY GOAL is creating COHESIVE, WEARABLE outfits.
 
 CRITICAL RULES:
-1. COHESION OVER VARIETY: Don't force variety if it sacrifices good style. Choose items that work together.
+1. COHESION OVER VARIETY: Don't force variety if it sacrifices good style. Choose items that work together. It's OK to reuse the same shoes/bag in multiple outfits if they work best. DO NOT force different shoes for each outfit.
 
-2. COLOR COORDINATION:
+2. RUNNING SHOES: Athletic/running shoes ONLY go with athletic wear. NEVER pair running shoes with bodysuits, skirts, dresses, or dressy items.
+
+3. COLOR COORDINATION:
    - IDEAL: Neutral colors + 0-1 accent color
    - BLACK bags work with DARK outfits, BUT TOO HARSH with light/pastel outfits
    - Light outfits (white, light blue, denim, pastels) → tan/brown/denim bags (NOT black)
@@ -901,14 +911,17 @@ CRITICAL RULES:
    - CASUAL = NO HEELS. Only: sneakers, flats, loafers, slides
    - SMART CASUAL/DRESSY/FORMAL = NO SNEAKERS (exception: clean minimal sneakers for smart casual)
    - SMART CASUAL/DRESSY = NO DENIM SHORTS
+   - Running/athletic shoes = ONLY for athletic wear, NEVER with bodysuits/skirts/dresses
 
 4. 🚨 BLACK BAG RULE: If you're picking light colored items (light blue, denim, white, cream), DO NOT pick black bags. Use tan/brown/denim bags instead. Black bags ONLY work with dark outfits.
 
-5. ${formalityCat === 'casual' ? 'CASUAL = t-shirt/tank/casual top + jeans/pants + FLAT SHOES. OR casual dress + sneakers. NO HEELS! Keep simple.' : formalityCat === 'smartCasual' ? 'SMART CASUAL = NO DENIM SHORTS. NO TUBE TOPS. Mix elevated + casual: tank+jeans+heels OR dressy top+linen shorts+heels. NOT denim shorts!' : formalityCat === 'formal' ? 'FORMAL = elegant dress + heels (NO SNEAKERS, NO SHORTS)' : 'Match shoes to formality'}
+5. DO NOT FORCE VARIETY: Reuse shoes/bags if they work best. Don't pick different shoes for each outfit just for variety.
 
-6. ${temperature >= 70 ? 'WARM: No long sleeves, no sweaters, no ribbed!' : temperature < 50 ? 'COLD: Add outerwear! Prefer pants for casual.' : ''}
+6. ${formalityCat === 'casual' ? 'CASUAL = t-shirt/tank/casual top + jeans/pants + FLAT SHOES. OR casual dress + sneakers. NO HEELS! NO bodysuits! NO mini skirts! Keep simple and relaxed.' : formalityCat === 'smartCasual' ? 'SMART CASUAL = NO DENIM SHORTS. NO TUBE TOPS. Mix elevated + casual: tank+jeans+heels OR dressy top+linen shorts+heels. NOT denim shorts!' : formalityCat === 'formal' ? 'FORMAL = elegant dress + heels (NO SNEAKERS, NO SHORTS)' : 'Match shoes to formality'}
 
-7. Only use provided item IDs. Dress = complete outfit (no extra top/bottom).`
+7. ${temperature >= 70 ? 'WARM: No long sleeves, no sweaters, no ribbed!' : temperature < 50 ? 'COLD: Add outerwear! Prefer pants for casual.' : ''}
+
+8. Only use provided item IDs. Dress = complete outfit (no extra top/bottom).`
         },
         { role: 'user', content: prompt }
       ],
