@@ -4,8 +4,9 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { User, ClosetItem, Outfit } from '@/types'
-import { Shirt, Calendar, LogOut, User as UserIcon, Heart, Luggage, Image } from 'lucide-react'
+import { Shirt, Calendar, LogOut, User as UserIcon, Heart, Luggage, Image as ImageIcon, Sparkles } from 'lucide-react'
 import WeatherDisplay from '@/components/WeatherDisplay'
+import NextImage from 'next/image'
 
 export default function DashboardPage() {
   const [user, setUser] = useState<User | null>(null)
@@ -139,7 +140,7 @@ export default function DashboardPage() {
             className="flex flex-col items-center gap-2 group"
           >
             <div className="p-4 rounded-full bg-beige border border-taupe/10 group-hover:bg-taupe/20 transition-colors">
-              <Image className="w-6 h-6 text-dark-taupe" />
+              <ImageIcon className="w-6 h-6 text-dark-taupe" />
             </div>
             <span className="text-sm font-medium text-dark-taupe tracking-wide">Inspo</span>
           </button>
@@ -204,64 +205,82 @@ export default function DashboardPage() {
               </button>
             </div>
           ) : (
-            <div className="grid md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {outfits.slice(0, 6).map((outfit) => {
-                const outfitItems = closetItems.filter(item =>
-                  outfit.outfit_data.closet_item_ids?.includes(item.id)
-                )
-                const newItems = outfit.outfit_data.new_items || []
+                const closetItemIds = outfit.outfit_data?.closet_item_ids || []
+                const previewItems = closetItemIds
+                  .slice(0, 4)
+                  .map((id) => closetItems.find((item) => item.id === id))
+                  .filter(Boolean) as ClosetItem[]
+
+                const date = new Date(outfit.created_at).toLocaleDateString('en-US', {
+                  month: 'short',
+                  day: 'numeric',
+                })
 
                 return (
-                  <div key={outfit.id} className="bg-beige rounded-3xl overflow-hidden border border-taupe/10 hover:shadow-lg transition-all">
-                    {/* Favorite Badge */}
-                    {outfit.is_favorite && (
-                      <div className="absolute top-4 right-4 z-10">
-                        <Heart className="w-5 h-5 fill-blush text-blush" />
-                      </div>
-                    )}
-
-                    <div className="p-6 bg-cream/50 relative">
-                      {outfitItems.length > 0 && (
-                        <div>
-                          <p className="text-xs font-medium text-warm-grey tracking-wide uppercase mb-3">From Your Closet</p>
-                          <div className="grid grid-cols-3 gap-3 mb-4">
-                            {outfitItems.map((item) => (
-                              <img
-                                key={item.id}
+                  <div
+                    key={outfit.id}
+                    className="bg-beige rounded-3xl border border-taupe/10 overflow-hidden hover:shadow-lg transition-all cursor-pointer"
+                    onClick={() => router.push('/outfits/history')}
+                  >
+                    <div className="aspect-[4/5] bg-cream relative">
+                      {previewItems.length > 0 ? (
+                        <div className="grid grid-cols-2 h-full gap-0.5">
+                          {previewItems.map((item, idx) => (
+                            <div key={idx} className="relative bg-cream">
+                              <NextImage
                                 src={item.image_url}
-                                alt={item.name}
-                                className="w-full aspect-[4/5] object-cover rounded-2xl"
+                                alt={item.name || ''}
+                                fill
+                                className="object-cover"
                               />
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {newItems.length > 0 && (
-                        <div>
-                          <p className="text-xs font-medium text-dark-taupe tracking-wide uppercase mb-3">New Items to Consider</p>
-                          <div className="space-y-3">
-                            {newItems.map((item: any, i: number) => (
-                              <div key={i} className="bg-beige p-4 rounded-2xl border border-taupe/10">
-                                <p className="font-normal text-sm text-dark-taupe leading-relaxed">{item.description}</p>
-                                <p className="text-xs text-warm-grey mt-2">{item.reasoning}</p>
+                            </div>
+                          ))}
+                          {previewItems.length < 4 &&
+                            Array.from({ length: 4 - previewItems.length }).map((_, idx) => (
+                              <div
+                                key={`empty-${idx}`}
+                                className="bg-gradient-to-br from-cream to-beige flex items-center justify-center"
+                              >
+                                <Sparkles className="w-6 h-6 text-taupe" />
                               </div>
                             ))}
-                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-center h-full">
+                          <Sparkles className="w-12 h-12 text-taupe" />
                         </div>
                       )}
 
-                      {outfitItems.length === 0 && newItems.length === 0 && (
-                        <div className="text-center text-warm-grey text-sm py-12">
-                          No items
+                      {outfit.outfit_data?.new_items?.length > 0 && (
+                        <div className="absolute top-3 left-3 px-3 py-1.5 bg-blush/90 backdrop-blur-sm text-dark-taupe text-xs font-medium rounded-full">
+                          +{outfit.outfit_data.new_items.length} NEW
+                        </div>
+                      )}
+
+                      {outfit.is_favorite && (
+                        <div className="absolute top-3 right-3">
+                          <Heart className="w-5 h-5 fill-blush text-blush" />
                         </div>
                       )}
                     </div>
-                    <div className="p-6">
-                      <h3 className="font-medium text-base mb-3 text-dark-taupe">{outfit.label}</h3>
-                      <p className="text-sm text-warm-grey leading-relaxed">
-                        {outfit.outfit_data.rationale || outfit.outfit_data.style_rationale}
-                      </p>
+
+                    <div className="p-5">
+                      <div className="mb-2">
+                        <h3 className="font-medium text-dark-taupe truncate">{outfit.label}</h3>
+                        <div className="flex items-center gap-2 text-xs text-warm-grey mt-1">
+                          <span>{outfit.context_type}</span>
+                          <span>•</span>
+                          <span>{date}</span>
+                        </div>
+                      </div>
+
+                      {outfit.outfit_data?.rationale && (
+                        <p className="text-sm text-warm-grey leading-relaxed line-clamp-2">
+                          {outfit.outfit_data.rationale}
+                        </p>
+                      )}
                     </div>
                   </div>
                 )
