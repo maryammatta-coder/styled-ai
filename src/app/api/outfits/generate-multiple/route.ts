@@ -857,6 +857,12 @@ ${appropriate.bags.length > 0 ? formatItems(appropriate.bags) : '⚠️ NO BAGS 
 
 11. STYLE COHESION: Keep the vibe consistent. Athletic sneakers go with athleisure, NOT with dressy pieces. Linen shorts with heels OK for daytime, denim shorts NEVER for smart casual or dressy.
 
+12. 🚨🚨🚨 BLACK BAG RULE (CRITICAL - READ CAREFULLY):
+   - If outfit has light blue + denim + white → DO NOT pick black bag, pick tan/denim/brown
+   - If outfit is all white/cream/light colors → DO NOT pick black bag, pick tan/brown/nude
+   - Black bags ONLY work with darker clothing (black, navy, dark colors)
+   - Example: light blue tank + denim shorts + white sneakers = TOO LIGHT for black bag → use denim/tan bag instead
+
 ## RESPONSE (JSON only)
 {
   "outfits": [
@@ -896,11 +902,13 @@ CRITICAL RULES:
    - SMART CASUAL/DRESSY/FORMAL = NO SNEAKERS (exception: clean minimal sneakers for smart casual)
    - SMART CASUAL/DRESSY = NO DENIM SHORTS
 
-4. ${formalityCat === 'casual' ? 'CASUAL = t-shirt/tank/casual top + jeans/pants + FLAT SHOES. OR casual dress + sneakers. NO HEELS! Keep simple.' : formalityCat === 'smartCasual' ? 'SMART CASUAL = NO DENIM SHORTS. NO TUBE TOPS. Mix elevated + casual: tank+jeans+heels OR dressy top+linen shorts+heels. NOT denim shorts!' : formalityCat === 'formal' ? 'FORMAL = elegant dress + heels (NO SNEAKERS, NO SHORTS)' : 'Match shoes to formality'}
+4. 🚨 BLACK BAG RULE: If you're picking light colored items (light blue, denim, white, cream), DO NOT pick black bags. Use tan/brown/denim bags instead. Black bags ONLY work with dark outfits.
 
-5. ${temperature >= 70 ? 'WARM: No long sleeves, no sweaters, no ribbed!' : temperature < 50 ? 'COLD: Add outerwear! Prefer pants for casual.' : ''}
+5. ${formalityCat === 'casual' ? 'CASUAL = t-shirt/tank/casual top + jeans/pants + FLAT SHOES. OR casual dress + sneakers. NO HEELS! Keep simple.' : formalityCat === 'smartCasual' ? 'SMART CASUAL = NO DENIM SHORTS. NO TUBE TOPS. Mix elevated + casual: tank+jeans+heels OR dressy top+linen shorts+heels. NOT denim shorts!' : formalityCat === 'formal' ? 'FORMAL = elegant dress + heels (NO SNEAKERS, NO SHORTS)' : 'Match shoes to formality'}
 
-6. Only use provided item IDs. Dress = complete outfit (no extra top/bottom).`
+6. ${temperature >= 70 ? 'WARM: No long sleeves, no sweaters, no ribbed!' : temperature < 50 ? 'COLD: Add outerwear! Prefer pants for casual.' : ''}
+
+7. Only use provided item IDs. Dress = complete outfit (no extra top/bottom).`
         },
         { role: 'user', content: prompt }
       ],
