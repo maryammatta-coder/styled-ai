@@ -907,9 +907,46 @@ CRITICAL RULES:
       // Fix: If no bag, add one or suggest new
       if (selected.bags.length === 0) {
         if (appropriate.bags.length > 0) {
-          // Add bag from closet
-          validIds.push(appropriate.bags[0].id)
-          selected.bags.push(appropriate.bags[0])
+          // Add bag from closet - prefer bags that match outfit colors
+          let bestBag = appropriate.bags[0]
+
+          // Get colors in the current outfit
+          const outfitColors = selectedItems.map((i: ClosetItem) => (i.color || '').toLowerCase())
+
+          // Try to find a bag that matches the outfit colors or is neutral
+          const matchingBag = appropriate.bags.find((bag: ClosetItem) => {
+            const bagColor = (bag.color || '').toLowerCase()
+            const bagName = (bag.name || '').toLowerCase()
+
+            // Check if bag color matches any outfit color (e.g., denim bag with denim shorts)
+            if (outfitColors.some((c: string) => bagColor.includes(c) || c.includes(bagColor))) {
+              return true
+            }
+
+            // Check for matching materials (e.g., denim bag with denim shorts)
+            if (bagName.includes('denim') && outfitColors.some((c: string) => c.includes('denim'))) {
+              return true
+            }
+
+            return false
+          })
+
+          // If we found a matching bag, use it; otherwise fall back to black/neutral bags
+          if (matchingBag) {
+            bestBag = matchingBag
+          } else {
+            // Prefer black or neutral bags as safe choices
+            const neutralBag = appropriate.bags.find((bag: ClosetItem) => {
+              const bagColor = (bag.color || '').toLowerCase()
+              return bagColor.includes('black') || bagColor.includes('tan') ||
+                     bagColor.includes('brown') || bagColor.includes('beige') ||
+                     bagColor.includes('neutral')
+            })
+            if (neutralBag) bestBag = neutralBag
+          }
+
+          validIds.push(bestBag.id)
+          selected.bags.push(bestBag)
         } else {
           // No bags in closet - ensure new_items includes a bag suggestion
           const hasBagSuggestion = (outfit.new_items || []).some((item: any) => {
@@ -1036,7 +1073,7 @@ CRITICAL RULES:
 
       const itemList = itemDetails.map((i: ClosetItem) => `${i.name} (${i.category}, ${i.color})`).join(', ')
 
-      const regenPrompt = `Write accurate descriptions for this outfit. Be specific and only mention the EXACT items listed below.
+      const regenPrompt = `Write SHORT, concise descriptions for this outfit (1-2 sentences each, max 50 words).
 
 EXACT ITEMS IN THIS OUTFIT: ${itemList}
 
@@ -1044,19 +1081,22 @@ Occasion: ${occasion}
 Weather: ${temperature}°F
 Formality: ${formalityCat}
 
-CRITICAL: Only mention the items I listed above. Do NOT mention any items that aren't in the list.
+IMPORTANT:
+- Be concise and conversational, not a list
+- Only mention the items I listed above
+- Keep it brief - 1-2 sentences per field
 
 Respond with JSON:
 {
-  "weather_rationale": "Explain why THESE SPECIFIC ITEMS work for ${temperature}°F weather",
-  "style_rationale": "Explain why THIS SPECIFIC OUTFIT fits ${occasion} at ${formalityCat} formality"
+  "weather_rationale": "Brief 1-2 sentence explanation of why this outfit works for ${temperature}°F",
+  "style_rationale": "Brief 1-2 sentence explanation of why this fits ${occasion}"
 }`
 
       try {
         const regenCompletion = await openai.chat.completions.create({
           model: 'gpt-4o-mini',
           messages: [
-            { role: 'system', content: 'You are a fashion stylist. Write descriptions that ONLY mention the exact items provided. Never mention items that are not in the list.' },
+            { role: 'system', content: 'You are a fashion stylist. Write BRIEF, concise descriptions (1-2 sentences, max 50 words each). Only mention exact items provided. Be conversational, not a list.' },
             { role: 'user', content: regenPrompt }
           ],
           response_format: { type: 'json_object' },
