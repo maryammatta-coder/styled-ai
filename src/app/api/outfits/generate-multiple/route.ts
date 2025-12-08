@@ -863,9 +863,11 @@ ${appropriate.bags.length > 0 ? formatItems(appropriate.bags) : '⚠️ NO BAGS 
 
 11. STYLE COHESION: Keep the vibe consistent. Athletic/running shoes go with athletic wear ONLY, NEVER with bodysuits/skirts/dresses. Linen shorts with heels OK for daytime, denim shorts NEVER for smart casual or dressy.
 
-12. DO NOT FORCE VARIETY: If white sneakers work best for all 3 outfits, use them for all 3. Don't use different shoes just for variety. Same for bags.
+12. SNEAKER COLOR MATCHING: Match sneaker colors to outfit. Tan/beige shorts → tan/beige sneakers. Navy cami + tan shorts → beige sneakers match better than white. Denim shorts → white sneakers work great. Think about color coordination!
 
-13. 🚨🚨🚨 BLACK BAG RULE (CRITICAL - READ CAREFULLY):
+13. DO NOT FORCE VARIETY: If white sneakers work best for all 3 outfits, use them for all 3. Don't use different shoes just for variety. Same for bags.
+
+14. 🚨🚨🚨 BLACK BAG RULE (CRITICAL - READ CAREFULLY):
    - If outfit has light blue + denim + white → DO NOT pick black bag, pick tan/denim/brown
    - If outfit is all white/cream/light colors → DO NOT pick black bag, pick tan/brown/nude
    - Black bags ONLY work with darker clothing (black, navy, dark colors)
@@ -912,6 +914,7 @@ CRITICAL RULES:
    - SMART CASUAL/DRESSY/FORMAL = NO SNEAKERS (exception: clean minimal sneakers for smart casual)
    - SMART CASUAL/DRESSY = NO DENIM SHORTS
    - Running/athletic shoes = ONLY for athletic wear, NEVER with bodysuits/skirts/dresses
+   - MATCH SNEAKER COLORS: If outfit has tan/beige shorts, use tan/beige sneakers (NOT white). If outfit has denim, white sneakers work well.
 
 4. 🚨 BLACK BAG RULE: If you're picking light colored items (light blue, denim, white, cream), DO NOT pick black bags. Use tan/brown/denim bags instead. Black bags ONLY work with dark outfits.
 
@@ -963,10 +966,36 @@ CRITICAL RULES:
         })
       }
 
-      // Fix: If no shoes, add appropriate ones
+      // Fix: If no shoes, add appropriate ones - prefer shoes that match outfit colors
       if (selected.shoes.length === 0 && appropriate.shoes.length > 0) {
-        validIds.push(appropriate.shoes[0].id)
-        selected.shoes.push(appropriate.shoes[0])
+        const outfitColors = selectedItems.map((i: ClosetItem) => (i.color || '').toLowerCase())
+
+        // Try to find shoes that match outfit colors
+        const matchingShoe = appropriate.shoes.find((shoe: ClosetItem) => {
+          const shoeColor = (shoe.color || '').toLowerCase()
+          const shoeName = (shoe.name || '').toLowerCase()
+
+          // If outfit has tan/beige, prefer tan/beige sneakers
+          if (outfitColors.some((c: string) => c.includes('tan') || c.includes('beige'))) {
+            if (shoeColor.includes('tan') || shoeColor.includes('beige') ||
+                shoeName.includes('tan') || shoeName.includes('beige')) {
+              return true
+            }
+          }
+
+          // If outfit has denim, white sneakers work well
+          if (outfitColors.some((c: string) => c.includes('denim'))) {
+            if (shoeColor.includes('white') || shoeName.includes('white')) {
+              return true
+            }
+          }
+
+          return false
+        })
+
+        const shoeToUse = matchingShoe || appropriate.shoes[0]
+        validIds.push(shoeToUse.id)
+        selected.shoes.push(shoeToUse)
       }
 
       // Fix: If no bag, add one or suggest new
