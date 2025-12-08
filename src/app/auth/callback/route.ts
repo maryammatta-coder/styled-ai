@@ -8,10 +8,21 @@ export async function GET(request: Request) {
 
   if (code) {
     const supabase = await createClient()
-    const { data, error } = await supabase.auth.exchangeCodeForSession(code)
 
-    if (!error && data.user) {
-      // Check if user profile exists
+    try {
+      const { data, error } = await supabase.auth.exchangeCodeForSession(code)
+
+      if (error) {
+        console.error('Auth exchange error:', error)
+        return NextResponse.redirect(new URL('/login?error=auth_exchange_failed', requestUrl.origin))
+      }
+
+      if (!data.session || !data.user) {
+        console.error('No session or user after exchange')
+        return NextResponse.redirect(new URL('/login?error=no_session', requestUrl.origin))
+      }
+
+      // Session is now set - check if user profile exists
       const { data: existingUser } = await supabase
         .from('users')
         .select('id')
@@ -44,11 +55,10 @@ export async function GET(request: Request) {
 
       // Existing user, go to dashboard or next URL
       return NextResponse.redirect(new URL(next, requestUrl.origin))
+    } catch (err) {
+      console.error('Unexpected error in auth callback:', err)
+      return NextResponse.redirect(new URL('/login?error=unexpected_error', requestUrl.origin))
     }
-
-    // Auth exchange failed
-    console.error('Auth error:', error)
-    return NextResponse.redirect(new URL('/login?error=auth_failed', requestUrl.origin))
   }
 
   // No code provided

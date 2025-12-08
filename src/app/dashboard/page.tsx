@@ -21,6 +21,15 @@ export default function DashboardPage() {
 
   const loadUserData = async () => {
     try {
+      // First try to get the session to ensure it's loaded
+      const { data: { session } } = await supabase.auth.getSession()
+
+      if (!session) {
+        // No session found, redirect to login
+        router.push('/login')
+        return
+      }
+
       const { data: { user: authUser } } = await supabase.auth.getUser()
       if (!authUser) {
         router.push('/login')
