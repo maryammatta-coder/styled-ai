@@ -1,10 +1,23 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
+import { useEffect } from 'react'
 import { Sparkles, Calendar, Camera, Shirt } from 'lucide-react'
 
 export default function Home() {
   const router = useRouter()
+
+  // Handle OAuth callback if code is present
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const code = params.get('code')
+
+    if (code) {
+      console.log('🔄 OAuth code detected on landing page, redirecting to auth callback')
+      // Redirect to auth callback with the code
+      window.location.href = `/auth/callback?code=${code}`
+    }
+  }, [])
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-cream via-beige to-blush">

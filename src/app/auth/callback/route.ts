@@ -7,6 +7,12 @@ export async function GET(request: Request) {
   const code = requestUrl.searchParams.get('code')
   const next = requestUrl.searchParams.get('next') || '/dashboard'
 
+  console.log('🔐 Auth callback hit:', {
+    url: requestUrl.toString(),
+    code: code ? 'present' : 'missing',
+    next,
+  })
+
   if (code) {
     const cookieStore = await cookies()
     const response = NextResponse.redirect(new URL(next, requestUrl.origin))
