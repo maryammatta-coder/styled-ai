@@ -1139,18 +1139,28 @@ CRITICAL RULES:
           // We have a light outfit with a black bag - SWAP IT
           console.log('Light outfit detected with black bag - swapping for lighter bag')
 
-          // Find a lighter bag
-          const lightBag = appropriate.bags.find((bag: ClosetItem) => {
+          // Search ALL closet bags, not just formality-filtered ones
+          // This ensures we can find denim/tan bags even if formality filter was too strict
+          const allBags = closetItems.filter((item: ClosetItem) => {
+            const name = (item.name || '').toLowerCase()
+            return name.includes('bag') || name.includes('purse') || name.includes('handbag') ||
+                   name.includes('clutch') || name.includes('tote') || name.includes('satchel') ||
+                   name.includes('crossbody') || name.includes('shoulder bag')
+          })
+
+          // Find a lighter bag from ALL bags
+          const lightBag = allBags.find((bag: ClosetItem) => {
             const bagColor = (bag.color || '').toLowerCase()
             const bagName = (bag.name || '').toLowerCase()
 
             // Avoid black bags
             if (bagColor.includes('black')) return false
 
-            // Prefer light colors
+            // Prefer light colors and casual materials
             if (bagColor.includes('tan') || bagColor.includes('cream') ||
                 bagColor.includes('beige') || bagColor.includes('nude') ||
-                bagColor.includes('brown') || bagName.includes('denim')) {
+                bagColor.includes('brown') || bagName.includes('denim') ||
+                bagColor.includes('light') || bagColor.includes('sand')) {
               return true
             }
             return false
@@ -1167,8 +1177,8 @@ CRITICAL RULES:
             finalItems[bagIndex] = lightBag
             itemsWereSwapped = true
           } else {
-            // No light bag available, use any non-black bag
-            const nonBlackBag = appropriate.bags.find((bag: ClosetItem) => {
+            // No light bag available, use ANY non-black bag from all bags
+            const nonBlackBag = allBags.find((bag: ClosetItem) => {
               const bagColor = (bag.color || '').toLowerCase()
               return !bagColor.includes('black')
             })
