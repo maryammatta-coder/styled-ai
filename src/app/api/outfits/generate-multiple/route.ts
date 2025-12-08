@@ -1123,6 +1123,8 @@ CRITICAL RULES:
 
       // CRITICAL: Check if light outfit has black bag - swap if so
       const outfitColors = finalItems.map((i: ClosetItem) => (i.color || '').toLowerCase())
+      console.log('OUTFIT COLORS:', outfitColors)
+
       const lightColors = ['white', 'cream', 'beige', 'ivory', 'off-white', 'light', 'pale', 'pastel', 'soft']
       const lightBlueDenim = ['light blue', 'light denim', 'denim', 'blue denim', 'baby blue', 'sky blue', 'powder blue']
 
@@ -1133,6 +1135,8 @@ CRITICAL RULES:
         return false
       })
 
+      console.log('IS LIGHT OUTFIT:', isLightOutfit)
+
       if (isLightOutfit) {
         // Find if there's a black bag in the outfit
         const bagIndex = finalItems.findIndex((item: ClosetItem) => {
@@ -1140,12 +1144,16 @@ CRITICAL RULES:
           const color = (item.color || '').toLowerCase()
           const isBag = name.includes('bag') || name.includes('purse') || name.includes('clutch')
           const isBlack = color.includes('black')
+          console.log('Checking item:', name, 'color:', color, 'isBag:', isBag, 'isBlack:', isBlack)
           return isBag && isBlack
         })
 
+        console.log('BAG INDEX:', bagIndex)
+
         if (bagIndex >= 0) {
           // We have a light outfit with a black bag - SWAP IT
-          console.log('Light outfit detected with black bag - swapping for lighter bag')
+          console.log('🚨 LIGHT OUTFIT WITH BLACK BAG DETECTED - FORCING SWAP')
+          console.log('Current bag:', finalItems[bagIndex].name)
 
           // Search ALL closet bags, not just formality-filtered ones
           // This ensures we can find denim/tan bags even if formality filter was too strict
@@ -1174,8 +1182,12 @@ CRITICAL RULES:
             return false
           })
 
+          console.log('All bags found:', allBags.length)
+          console.log('Light bag found:', lightBag ? lightBag.name : 'NONE')
+
           if (lightBag) {
             // Swap the black bag for the light bag
+            console.log('✅ SWAPPING BLACK BAG FOR:', lightBag.name)
             validIds = validIds.map((id: string) =>
               id === finalItems[bagIndex].id ? lightBag.id : id
             )
@@ -1191,13 +1203,18 @@ CRITICAL RULES:
               return !bagColor.includes('black')
             })
 
+            console.log('Non-black bag found:', nonBlackBag ? nonBlackBag.name : 'NONE')
+
             if (nonBlackBag) {
+              console.log('✅ SWAPPING BLACK BAG FOR:', nonBlackBag.name)
               validIds = validIds.map((id: string) =>
                 id === finalItems[bagIndex].id ? nonBlackBag.id : id
               )
               outfit.closet_item_ids = validIds
               finalItems[bagIndex] = nonBlackBag
               itemsWereSwapped = true
+            } else {
+              console.log('❌ NO REPLACEMENT BAG FOUND - KEEPING BLACK BAG')
             }
           }
         }
