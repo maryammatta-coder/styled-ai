@@ -357,6 +357,47 @@ function isShoeAppropriateForFormality(item: ClosetItem, formalityLevel: number)
   return true
 }
 
+function isBagAppropriateForFormality(item: ClosetItem, formalityLevel: number): boolean {
+  const name = (item.name || '').toLowerCase()
+  const formality = getFormalityCategory(formalityLevel)
+
+  // For CASUAL (0-40): NO fancy/dressy bags
+  if (formality === 'casual') {
+    // Reject fancy materials and embellishments
+    if (name.includes('gold') || name.includes('silver') || name.includes('chain')) return false
+    if (name.includes('sequin') || name.includes('sparkle') || name.includes('glitter')) return false
+    if (name.includes('satin') || name.includes('velvet')) return false
+    if (name.includes('clutch') || name.includes('evening')) return false
+    if (name.includes('mini') && name.includes('leather')) return false // Mini leather bags are too dressy
+    if (name.includes('structured') || name.includes('formal')) return false
+
+    // Allow: canvas, denim, casual leather (tote, crossbody, backpack, hobo, bucket)
+    // These are naturally allowed by not being rejected
+  }
+
+  // For SMART CASUAL (41-60): Allow most bags except very casual or very formal
+  if (formality === 'smartCasual') {
+    // Reject too casual
+    if (name.includes('backpack') && !name.includes('leather')) return false
+    if (name.includes('canvas') && name.includes('tote')) return false
+
+    // Reject too formal
+    if (name.includes('evening') || name.includes('clutch')) return false
+    if (name.includes('sequin') || name.includes('sparkle')) return false
+  }
+
+  // For DRESSY/FORMAL (61+): Allow fancy bags, reject casual ones
+  if (formality === 'dressy' || formality === 'formal') {
+    // Reject casual materials
+    if (name.includes('canvas')) return false
+    if (name.includes('denim')) return false
+    if (name.includes('backpack')) return false
+    if (name.includes('tote') && !name.includes('leather')) return false
+  }
+
+  return true
+}
+
 function isItemAppropriateForFormality(item: ClosetItem, formalityLevel: number): boolean {
   const name = (item.name || '').toLowerCase()
   const category = categorizeItem(item)
@@ -693,9 +734,10 @@ export async function POST(request: NextRequest) {
       // Filter for weather + formality appropriateness
       const weatherOK = isWeatherAppropriate(item, temperature)
       const shoesFormalityOK = cat !== 'shoes' || isShoeAppropriateForFormality(item, formalityLevel)
+      const bagFormalityOK = !isBag || isBagAppropriateForFormality(item, formalityLevel)
       const itemFormalityOK = isItemAppropriateForFormality(item, formalityLevel)
 
-      if (weatherOK && shoesFormalityOK && itemFormalityOK) {
+      if (weatherOK && shoesFormalityOK && bagFormalityOK && itemFormalityOK) {
         if (isBag) {
           appropriate.bags.push(item)
         } else if (appropriate[cat]) {
@@ -1073,7 +1115,7 @@ CRITICAL RULES:
 
       const itemList = itemDetails.map((i: ClosetItem) => `${i.name} (${i.category}, ${i.color})`).join(', ')
 
-      const regenPrompt = `Write SHORT, concise descriptions for this outfit (1-2 sentences each, max 50 words).
+      const regenPrompt = `Write ONE SHORT, concise description for this outfit (2-3 sentences max, under 80 words total).
 
 EXACT ITEMS IN THIS OUTFIT: ${itemList}
 
@@ -1082,21 +1124,21 @@ Weather: ${temperature}°F
 Formality: ${formalityCat}
 
 IMPORTANT:
-- Be concise and conversational, not a list
-- Only mention the items I listed above
-- Keep it brief - 1-2 sentences per field
+- Write ONE combined description covering both weather and style
+- Be concise and conversational, not a list of items
+- Only mention the items I listed above if needed for context
+- Keep it brief - 2-3 sentences total
 
 Respond with JSON:
 {
-  "weather_rationale": "Brief 1-2 sentence explanation of why this outfit works for ${temperature}°F",
-  "style_rationale": "Brief 1-2 sentence explanation of why this fits ${occasion}"
+  "rationale": "Brief explanation of why this outfit works for ${occasion} in ${temperature}°F weather"
 }`
 
       try {
         const regenCompletion = await openai.chat.completions.create({
           model: 'gpt-4o-mini',
           messages: [
-            { role: 'system', content: 'You are a fashion stylist. Write BRIEF, concise descriptions (1-2 sentences, max 50 words each). Only mention exact items provided. Be conversational, not a list.' },
+            { role: 'system', content: 'You are a fashion stylist. Write ONE BRIEF description (2-3 sentences max, under 80 words). Cover both weather and style. Be conversational, not a list.' },
             { role: 'user', content: regenPrompt }
           ],
           response_format: { type: 'json_object' },
@@ -1104,13 +1146,16 @@ Respond with JSON:
         })
 
         const regenData = JSON.parse(regenCompletion.choices[0]?.message?.content || '{}')
-        outfit.weather_rationale = regenData.weather_rationale || `Perfect for ${temperature}°F weather`
-        outfit.style_rationale = regenData.style_rationale || `Great choice for ${occasion}`
+        outfit.rationale = regenData.rationale || `Perfect for ${occasion} in ${temperature}°F weather`
+        // Keep legacy fields for backward compatibility
+        outfit.weather_rationale = ''
+        outfit.style_rationale = outfit.rationale
       } catch (error) {
         console.error('Failed to regenerate descriptions:', error)
-        // Use fallback descriptions
-        outfit.weather_rationale = `Styled for ${temperature}°F weather`
-        outfit.style_rationale = `Perfect for ${occasion}`
+        // Use fallback description
+        outfit.rationale = `Perfect for ${occasion} in ${temperature}°F weather`
+        outfit.weather_rationale = ''
+        outfit.style_rationale = outfit.rationale
       }
     }
 
@@ -1127,6 +1172,7 @@ Respond with JSON:
           closet_items: closetItemDetails,
           closet_item_ids: outfit.closet_item_ids || [],
           new_items: outfit.new_items || [],
+          rationale: outfit.rationale || outfit.style_rationale || '',
           weather_rationale: outfit.weather_rationale || '',
           style_rationale: outfit.style_rationale || '',
           styling_tips: outfit.styling_tips || [],

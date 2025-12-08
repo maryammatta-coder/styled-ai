@@ -747,18 +747,10 @@ const detectDestination = (event: CalendarEvent): string | null => {
                       )}
 
                       {/* Rationale */}
-                      {outfit.outfit_data?.weather_rationale && (
-                        <div className="p-4 bg-taupe/20 rounded-2xl mb-4">
-                          <p className="text-sm text-dark-taupe">
-                            🌤️ {outfit.outfit_data.weather_rationale}
-                          </p>
-                        </div>
-                      )}
-
-                      {outfit.outfit_data?.style_rationale && (
+                      {(outfit.outfit_data?.rationale || outfit.outfit_data?.style_rationale) && (
                         <div className="p-4 bg-blush/30 rounded-2xl mb-4">
-                          <p className="text-sm text-dark-taupe">
-                            ✨ {outfit.outfit_data.style_rationale}
+                          <p className="text-sm text-dark-taupe leading-relaxed">
+                            {outfit.outfit_data.rationale || outfit.outfit_data.style_rationale}
                           </p>
                         </div>
                       )}

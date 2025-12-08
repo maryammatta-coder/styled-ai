@@ -13,6 +13,7 @@ interface OutfitOption {
     closet_items: any[]
     closet_item_ids: string[]
     new_items: any[]
+    rationale?: string
     weather_rationale: string
     style_rationale: string
     styling_tips?: string[]
@@ -409,20 +410,11 @@ export default function GenerateOutfitPage() {
                   </div>
                 )}
 
-                {/* Weather Rationale */}
-                {currentOutfit.outfit_data.weather_rationale && (
-                  <div className="bg-taupe/20 p-3 rounded-2xl mb-3">
-                    <p className="text-sm text-dark-taupe">
-                      🌤️ {currentOutfit.outfit_data.weather_rationale}
-                    </p>
-                  </div>
-                )}
-
-                {/* Style Rationale */}
-                {currentOutfit.outfit_data.style_rationale && (
-                  <div className="bg-blush/30 p-3 rounded-2xl mb-3">
-                    <p className="text-sm text-dark-taupe">
-                      ✨ {currentOutfit.outfit_data.style_rationale}
+                {/* Outfit Rationale */}
+                {(currentOutfit.outfit_data.rationale || currentOutfit.outfit_data.style_rationale) && (
+                  <div className="bg-blush/30 p-4 rounded-2xl mb-3">
+                    <p className="text-sm text-dark-taupe leading-relaxed">
+                      {currentOutfit.outfit_data.rationale || currentOutfit.outfit_data.style_rationale}
                     </p>
                   </div>
                 )}

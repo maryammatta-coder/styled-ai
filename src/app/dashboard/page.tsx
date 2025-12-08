@@ -250,8 +250,9 @@ export default function DashboardPage() {
                     </div>
                     <div className="p-6">
                       <h3 className="font-medium text-base mb-3 text-dark-taupe">{outfit.label}</h3>
-                      <p className="text-sm text-warm-grey mb-2 leading-relaxed">{outfit.outfit_data.weather_rationale}</p>
-                      <p className="text-sm text-taupe leading-relaxed">{outfit.outfit_data.style_rationale}</p>
+                      <p className="text-sm text-warm-grey leading-relaxed">
+                        {outfit.outfit_data.rationale || outfit.outfit_data.style_rationale}
+                      </p>
                     </div>
                   </div>
                 )

@@ -3,7 +3,13 @@
     "allow": [
       "Bash(npm install:*)",
       "WebFetch(domain:malcmxkmlfqppztmvvov.supabase.co)",
-      "Bash(npx cap:*)"
+      "Bash(npx cap:*)",
+      "Bash(pod install)",
+      "Bash(npm run build:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nAdd native iOS features: Camera, Push Notifications, Status Bar, and Splash Screen\n\n- Add Camera plugin integration for taking photos and choosing from library\n- Configure Status Bar with light style and app theme colors\n- Set up Splash Screen auto-hide\n- Implement Push Notifications with permission handling\n- Add camera/photo library permissions to Info.plist\n- Update closet page with native camera UI\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git push:*)",
+      "Bash(git commit:*)"
     ],
     "deny": [],
     "ask": []

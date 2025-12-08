@@ -22,6 +22,7 @@ interface OutfitData {
   closet_items?: ClosetItem[]
   closet_item_ids: string[]
   new_items: NewItem[]
+  rationale?: string
   weather_rationale: string
   style_rationale: string
   styling_tips?: string[]
@@ -588,23 +589,11 @@ function OutfitDetailModal({
             </div>
           )}
 
-          {outfit.outfit_data?.weather_rationale && (
-            <div className="bg-blue-50 border border-blue-100 rounded-lg p-4">
-              <h4 className="font-medium text-blue-900 mb-1 flex items-center gap-2">
-                <Cloud className="w-4 h-4" />
-                Weather Consideration
-              </h4>
-              <p className="text-sm text-blue-800">{outfit.outfit_data.weather_rationale}</p>
-            </div>
-          )}
-
-          {outfit.outfit_data?.style_rationale && (
-            <div className="bg-purple-50 border border-purple-100 rounded-lg p-4">
-              <h4 className="font-medium text-purple-900 mb-1 flex items-center gap-2">
-                <Sparkles className="w-4 h-4" />
-                Style Notes
-              </h4>
-              <p className="text-sm text-purple-800">{outfit.outfit_data.style_rationale}</p>
+          {(outfit.outfit_data?.rationale || outfit.outfit_data?.style_rationale) && (
+            <div className="bg-blush/30 border border-taupe/20 rounded-2xl p-4">
+              <p className="text-sm text-dark-taupe leading-relaxed">
+                {outfit.outfit_data.rationale || outfit.outfit_data.style_rationale}
+              </p>
             </div>
           )}
 
