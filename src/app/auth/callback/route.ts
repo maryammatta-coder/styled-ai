@@ -1,5 +1,6 @@
-import { createClient } from '@/lib/supabase/server'
+import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
+import { cookies } from 'next/headers'
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url)
@@ -7,7 +8,26 @@ export async function GET(request: Request) {
   const next = requestUrl.searchParams.get('next') || '/dashboard'
 
   if (code) {
-    const supabase = await createClient()
+    const cookieStore = await cookies()
+    const response = NextResponse.redirect(new URL(next, requestUrl.origin))
+
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return cookieStore.getAll()
+          },
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value, options }) => {
+              cookieStore.set(name, value, options)
+              response.cookies.set(name, value, options)
+            })
+          },
+        },
+      }
+    )
 
     try {
       const { data, error } = await supabase.auth.exchangeCodeForSession(code)
@@ -50,11 +70,16 @@ export async function GET(request: Request) {
           return NextResponse.redirect(new URL('/login?error=profile_creation_failed', requestUrl.origin))
         }
 
-        return NextResponse.redirect(new URL('/onboarding', requestUrl.origin))
+        const onboardingResponse = NextResponse.redirect(new URL('/onboarding', requestUrl.origin))
+        // Copy cookies to onboarding response
+        response.cookies.getAll().forEach(cookie => {
+          onboardingResponse.cookies.set(cookie)
+        })
+        return onboardingResponse
       }
 
-      // Existing user, go to dashboard or next URL
-      return NextResponse.redirect(new URL(next, requestUrl.origin))
+      // Existing user, return response with cookies
+      return response
     } catch (err) {
       console.error('Unexpected error in auth callback:', err)
       return NextResponse.redirect(new URL('/login?error=unexpected_error', requestUrl.origin))
