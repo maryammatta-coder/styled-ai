@@ -361,45 +361,16 @@ function isBagAppropriateForFormality(item: ClosetItem, formalityLevel: number):
   const name = (item.name || '').toLowerCase()
   const formality = getFormalityCategory(formalityLevel)
 
-  // For CASUAL (0-40): ONLY allow super casual bags - whitelist approach
+  // For CASUAL (0-40): Reject only very dressy bags, but allow casual leather bags
   if (formality === 'casual') {
-    // Whitelist: ONLY these types are allowed for casual
-    const casualBagTypes = [
-      'canvas',
-      'denim',
-      'backpack',
-      'tote',
-      'hobo',
-      'bucket',
-      'crossbody',
-      'shoulder bag',
-      'messenger'
-    ]
-
-    // Check if bag matches any casual type
-    const isCasualType = casualBagTypes.some(type => name.includes(type))
-
-    // REJECT all mini bags for casual - they're almost always too dressy
-    if (name.includes('mini')) return false
-
-    // REJECT any bag with fancy details
-    if (name.includes('gold') || name.includes('silver') || name.includes('chain')) return false
+    // REJECT very dressy/formal details
     if (name.includes('sequin') || name.includes('sparkle') || name.includes('glitter')) return false
     if (name.includes('satin') || name.includes('velvet')) return false
     if (name.includes('clutch') || name.includes('evening')) return false
-    if (name.includes('structured') || name.includes('formal')) return false
+    if (name.includes('structured') && name.includes('formal')) return false
 
-    // For leather bags, ONLY allow if they're explicitly casual types (tote, hobo, etc)
-    if (name.includes('leather')) {
-      const casualLeatherTypes = ['tote', 'hobo', 'bucket', 'messenger', 'crossbody', 'shoulder bag']
-      const isCasualLeather = casualLeatherTypes.some(type => name.includes(type))
-      if (!isCasualLeather) return false // Reject generic leather bags
-    }
-
-    // If it's not a recognized casual type and not leather with casual type, reject it
-    if (!isCasualType && !name.includes('leather')) {
-      return false // Default reject for casual
-    }
+    // Mini bags with chain details are usually too dressy for casual
+    if (name.includes('mini') && name.includes('chain')) return false
   }
 
   // For SMART CASUAL (41-60): Allow most bags except very casual or very formal
@@ -860,9 +831,10 @@ ${appropriate.bags.length > 0 ? formatItems(appropriate.bags) : '⚠️ NO BAGS 
    - IDEAL: Mostly neutral colors (black, white, beige, navy, brown, gray) + 0-1 accent color
    - AVOID: Multiple bright colors in one outfit (burgundy + denim, red + blue, etc.)
    - NEVER: burgundy with beige, burgundy with denim, purple with blue, red with pink
-   - SAFE BETS: Black shoes/bag work with almost everything. When uncertain, choose black.
+   - BLACK BAGS: Great with most outfits, BUT if outfit is ALL WHITE/LIGHT (white linen, cream, ivory), choose tan/brown/denim bags instead
    - If dress is beige/cream/tan → choose black, brown, or tan accessories (NOT burgundy, NOT bright colors)
    - If dress is bright color → choose neutral accessories
+   - If outfit is all white/cream/light → AVOID black bags, prefer tan/cream/brown/denim bags
 
 3. 🚨 BAGS ARE MANDATORY: EVERY outfit MUST include a bag/purse. ${appropriate.bags.length === 0 ? 'Since there are NO bags in the closet, you MUST suggest a new bag in new_items for EVERY outfit (even for closet-only outfits).' : 'Use a bag from the BAGS list above. Prefer neutral bags for better coordination.'}
 
@@ -912,7 +884,8 @@ CRITICAL RULES:
 
 2. COLOR COORDINATION:
    - IDEAL: Neutral colors + 0-1 accent color
-   - When in doubt, choose BLACK or NEUTRAL accessories (shoes, bags)
+   - BLACK accessories work with MOST outfits, BUT not all-white/light outfits
+   - All white/cream/light outfits → choose tan/brown/denim bags (NOT black - too harsh)
    - NEVER: burgundy with beige, burgundy with denim, bright colors that clash
    - Beige/cream dress → black, brown, or tan accessories (NOT burgundy!)
 
@@ -976,13 +949,19 @@ CRITICAL RULES:
       // Fix: If no bag, add one or suggest new
       if (selected.bags.length === 0) {
         if (appropriate.bags.length > 0) {
-          // Add bag from closet - prefer bags that match outfit colors
+          // Add bag from closet - smart color matching based on outfit
           let bestBag = appropriate.bags[0]
 
           // Get colors in the current outfit
           const outfitColors = selectedItems.map((i: ClosetItem) => (i.color || '').toLowerCase())
 
-          // Try to find a bag that matches the outfit colors or is neutral
+          // Check if outfit is all white/light colors
+          const lightColors = ['white', 'cream', 'beige', 'ivory', 'off-white', 'light']
+          const isLightOutfit = outfitColors.every((c: string) =>
+            lightColors.some(light => c.includes(light))
+          )
+
+          // Try to find a bag that matches the outfit colors or materials
           const matchingBag = appropriate.bags.find((bag: ClosetItem) => {
             const bagColor = (bag.color || '').toLowerCase()
             const bagName = (bag.name || '').toLowerCase()
@@ -1000,11 +979,34 @@ CRITICAL RULES:
             return false
           })
 
-          // If we found a matching bag, use it; otherwise fall back to black/neutral bags
+          // If we found a matching bag, use it
           if (matchingBag) {
             bestBag = matchingBag
+          } else if (isLightOutfit) {
+            // For all-white/light outfits: AVOID black bags, prefer tan/cream/denim
+            const lightBag = appropriate.bags.find((bag: ClosetItem) => {
+              const bagColor = (bag.color || '').toLowerCase()
+              const bagName = (bag.name || '').toLowerCase()
+              // Prefer light-colored bags
+              if (bagColor.includes('tan') || bagColor.includes('cream') ||
+                  bagColor.includes('beige') || bagColor.includes('nude') ||
+                  bagColor.includes('brown') || bagName.includes('denim')) {
+                return true
+              }
+              return false
+            })
+            if (lightBag) {
+              bestBag = lightBag
+            } else {
+              // If no light bags, use first non-black bag
+              const nonBlackBag = appropriate.bags.find((bag: ClosetItem) => {
+                const bagColor = (bag.color || '').toLowerCase()
+                return !bagColor.includes('black')
+              })
+              if (nonBlackBag) bestBag = nonBlackBag
+            }
           } else {
-            // Prefer black or neutral bags as safe choices
+            // For non-light outfits: Black and neutral bags are fine
             const neutralBag = appropriate.bags.find((bag: ClosetItem) => {
               const bagColor = (bag.color || '').toLowerCase()
               return bagColor.includes('black') || bagColor.includes('tan') ||
