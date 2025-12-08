@@ -1110,8 +1110,82 @@ CRITICAL RULES:
         console.log('Color clash detected:', colorCheck.clashingPair)
       }
 
-      // Check style/vibe compatibility
+      // Track if items were swapped for description regeneration
       let itemsWereSwapped = false
+
+      // CRITICAL: Check if light outfit has black bag - swap if so
+      const outfitColors = finalItems.map((i: ClosetItem) => (i.color || '').toLowerCase())
+      const lightColors = ['white', 'cream', 'beige', 'ivory', 'off-white', 'light', 'pale', 'pastel', 'soft']
+      const lightBlueDenim = ['light blue', 'light denim', 'denim', 'blue denim', 'baby blue', 'sky blue', 'powder blue']
+
+      const isLightOutfit = outfitColors.every((c: string) => {
+        if (lightColors.some(light => c.includes(light))) return true
+        if (lightBlueDenim.some(blue => c.includes(blue))) return true
+        if (c.includes('tan') || c.includes('nude') || c.includes('sand')) return true
+        return false
+      })
+
+      if (isLightOutfit) {
+        // Find if there's a black bag in the outfit
+        const bagIndex = finalItems.findIndex((item: ClosetItem) => {
+          const name = (item.name || '').toLowerCase()
+          const color = (item.color || '').toLowerCase()
+          const isBag = name.includes('bag') || name.includes('purse') || name.includes('clutch')
+          const isBlack = color.includes('black')
+          return isBag && isBlack
+        })
+
+        if (bagIndex >= 0) {
+          // We have a light outfit with a black bag - SWAP IT
+          console.log('Light outfit detected with black bag - swapping for lighter bag')
+
+          // Find a lighter bag
+          const lightBag = appropriate.bags.find((bag: ClosetItem) => {
+            const bagColor = (bag.color || '').toLowerCase()
+            const bagName = (bag.name || '').toLowerCase()
+
+            // Avoid black bags
+            if (bagColor.includes('black')) return false
+
+            // Prefer light colors
+            if (bagColor.includes('tan') || bagColor.includes('cream') ||
+                bagColor.includes('beige') || bagColor.includes('nude') ||
+                bagColor.includes('brown') || bagName.includes('denim')) {
+              return true
+            }
+            return false
+          })
+
+          if (lightBag) {
+            // Swap the black bag for the light bag
+            validIds = validIds.map((id: string) =>
+              id === finalItems[bagIndex].id ? lightBag.id : id
+            )
+            outfit.closet_item_ids = validIds
+
+            // Update finalItems array
+            finalItems[bagIndex] = lightBag
+            itemsWereSwapped = true
+          } else {
+            // No light bag available, use any non-black bag
+            const nonBlackBag = appropriate.bags.find((bag: ClosetItem) => {
+              const bagColor = (bag.color || '').toLowerCase()
+              return !bagColor.includes('black')
+            })
+
+            if (nonBlackBag) {
+              validIds = validIds.map((id: string) =>
+                id === finalItems[bagIndex].id ? nonBlackBag.id : id
+              )
+              outfit.closet_item_ids = validIds
+              finalItems[bagIndex] = nonBlackBag
+              itemsWereSwapped = true
+            }
+          }
+        }
+      }
+
+      // Check style/vibe compatibility
       for (let i = 0; i < finalItems.length; i++) {
         for (let j = i + 1; j < finalItems.length; j++) {
           if (doVibesClash(finalItems[i], finalItems[j])) {
