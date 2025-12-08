@@ -831,10 +831,11 @@ ${appropriate.bags.length > 0 ? formatItems(appropriate.bags) : '⚠️ NO BAGS 
    - IDEAL: Mostly neutral colors (black, white, beige, navy, brown, gray) + 0-1 accent color
    - AVOID: Multiple bright colors in one outfit (burgundy + denim, red + blue, etc.)
    - NEVER: burgundy with beige, burgundy with denim, purple with blue, red with pink
-   - BLACK BAGS: Great with most outfits, BUT if outfit is ALL WHITE/LIGHT (white linen, cream, ivory), choose tan/brown/denim bags instead
+   - BLACK BAGS: Great with DARK/BOLD outfits, BUT TOO HARSH with light/pastel outfits
+   - Light outfits (white, cream, light blue, denim, pastels) → choose tan/brown/denim/nude bags (NOT black)
+   - Example: light blue tank + denim shorts + white sneakers = light outfit, needs tan/denim bag
    - If dress is beige/cream/tan → choose black, brown, or tan accessories (NOT burgundy, NOT bright colors)
    - If dress is bright color → choose neutral accessories
-   - If outfit is all white/cream/light → AVOID black bags, prefer tan/cream/brown/denim bags
 
 3. 🚨 BAGS ARE MANDATORY: EVERY outfit MUST include a bag/purse. ${appropriate.bags.length === 0 ? 'Since there are NO bags in the closet, you MUST suggest a new bag in new_items for EVERY outfit (even for closet-only outfits).' : 'Use a bag from the BAGS list above. Prefer neutral bags for better coordination.'}
 
@@ -884,8 +885,9 @@ CRITICAL RULES:
 
 2. COLOR COORDINATION:
    - IDEAL: Neutral colors + 0-1 accent color
-   - BLACK accessories work with MOST outfits, BUT not all-white/light outfits
-   - All white/cream/light outfits → choose tan/brown/denim bags (NOT black - too harsh)
+   - BLACK bags work with DARK outfits, BUT TOO HARSH with light/pastel outfits
+   - Light outfits (white, light blue, denim, pastels) → tan/brown/denim bags (NOT black)
+   - Example: light blue tank + denim shorts + white sneakers = light outfit, NO black bag
    - NEVER: burgundy with beige, burgundy with denim, bright colors that clash
    - Beige/cream dress → black, brown, or tan accessories (NOT burgundy!)
 
@@ -955,11 +957,19 @@ CRITICAL RULES:
           // Get colors in the current outfit
           const outfitColors = selectedItems.map((i: ClosetItem) => (i.color || '').toLowerCase())
 
-          // Check if outfit is all white/light colors
-          const lightColors = ['white', 'cream', 'beige', 'ivory', 'off-white', 'light']
-          const isLightOutfit = outfitColors.every((c: string) =>
-            lightColors.some(light => c.includes(light))
-          )
+          // Check if outfit is all light/pastel colors (includes white, light blue, denim, pastels)
+          const lightColors = ['white', 'cream', 'beige', 'ivory', 'off-white', 'light', 'pale', 'pastel', 'soft']
+          const lightBlueDenim = ['light blue', 'light denim', 'denim', 'blue denim', 'baby blue', 'sky blue', 'powder blue']
+
+          const isLightOutfit = outfitColors.every((c: string) => {
+            // Check if color is a light color
+            if (lightColors.some(light => c.includes(light))) return true
+            // Check if color is light blue or denim
+            if (lightBlueDenim.some(blue => c.includes(blue))) return true
+            // Tan and nude are also light
+            if (c.includes('tan') || c.includes('nude') || c.includes('sand')) return true
+            return false
+          })
 
           // Try to find a bag that matches the outfit colors or materials
           const matchingBag = appropriate.bags.find((bag: ClosetItem) => {

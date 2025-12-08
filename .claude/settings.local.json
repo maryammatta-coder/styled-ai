@@ -9,7 +9,8 @@
       "Bash(git add:*)",
       "Bash(git commit -m \"$(cat <<''EOF''\nAdd native iOS features: Camera, Push Notifications, Status Bar, and Splash Screen\n\n- Add Camera plugin integration for taking photos and choosing from library\n- Configure Status Bar with light style and app theme colors\n- Set up Splash Screen auto-hide\n- Implement Push Notifications with permission handling\n- Add camera/photo library permissions to Info.plist\n- Update closet page with native camera UI\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\nEOF\n)\")",
       "Bash(git push:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(go with a black leather bag dude. thats damn near and all white outfit\"\n\nFIX: Broader definition of \"light outfit\"\n- Added light blue, denim, pastels to light outfit detection\n- Light outfit now includes:\n  * White, cream, beige, ivory, off-white\n  * Light blue, baby blue, sky blue, powder blue\n  * Denim (light denim, blue denim)\n  * Pastels, pale colors, soft colors\n  * Tan, nude, sand\n\nResult: light blue tank + denim shorts + white sneakers is now correctly\nidentified as a light outfit → avoids black bag, picks tan/denim/brown instead\n\nBoth backend and AI now understand that denim + light blue + white sneakers\nis basically an all-light look that needs a softer bag color.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\nEOF\n)\")"
     ],
     "deny": [],
     "ask": []
