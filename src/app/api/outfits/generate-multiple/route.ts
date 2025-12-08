@@ -361,18 +361,45 @@ function isBagAppropriateForFormality(item: ClosetItem, formalityLevel: number):
   const name = (item.name || '').toLowerCase()
   const formality = getFormalityCategory(formalityLevel)
 
-  // For CASUAL (0-40): NO fancy/dressy bags
+  // For CASUAL (0-40): ONLY allow super casual bags - whitelist approach
   if (formality === 'casual') {
-    // Reject fancy materials and embellishments
+    // Whitelist: ONLY these types are allowed for casual
+    const casualBagTypes = [
+      'canvas',
+      'denim',
+      'backpack',
+      'tote',
+      'hobo',
+      'bucket',
+      'crossbody',
+      'shoulder bag',
+      'messenger'
+    ]
+
+    // Check if bag matches any casual type
+    const isCasualType = casualBagTypes.some(type => name.includes(type))
+
+    // REJECT all mini bags for casual - they're almost always too dressy
+    if (name.includes('mini')) return false
+
+    // REJECT any bag with fancy details
     if (name.includes('gold') || name.includes('silver') || name.includes('chain')) return false
     if (name.includes('sequin') || name.includes('sparkle') || name.includes('glitter')) return false
     if (name.includes('satin') || name.includes('velvet')) return false
     if (name.includes('clutch') || name.includes('evening')) return false
-    if (name.includes('mini') && name.includes('leather')) return false // Mini leather bags are too dressy
     if (name.includes('structured') || name.includes('formal')) return false
 
-    // Allow: canvas, denim, casual leather (tote, crossbody, backpack, hobo, bucket)
-    // These are naturally allowed by not being rejected
+    // For leather bags, ONLY allow if they're explicitly casual types (tote, hobo, etc)
+    if (name.includes('leather')) {
+      const casualLeatherTypes = ['tote', 'hobo', 'bucket', 'messenger', 'crossbody', 'shoulder bag']
+      const isCasualLeather = casualLeatherTypes.some(type => name.includes(type))
+      if (!isCasualLeather) return false // Reject generic leather bags
+    }
+
+    // If it's not a recognized casual type and not leather with casual type, reject it
+    if (!isCasualType && !name.includes('leather')) {
+      return false // Default reject for casual
+    }
   }
 
   // For SMART CASUAL (41-60): Allow most bags except very casual or very formal
