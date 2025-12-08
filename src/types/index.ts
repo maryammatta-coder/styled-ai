@@ -61,6 +61,7 @@ export interface Outfit {
       estimated_price?: string
       search_terms?: string
     }>
+    rationale?: string
     weather_rationale: string
     style_rationale: string
     styling_tips?: string[]
