@@ -855,7 +855,7 @@ ${appropriate.bags.length > 0 ? formatItems(appropriate.bags) : '⚠️ NO BAGS 
 
 7. Only use IDs from the lists above
 
-8. ${itemSource === 'closet' ? 'new_items must be [] UNLESS suggesting a bag (bags are mandatory even for closet-only)' : itemSource === 'mix' ? '🎨 MIX & MATCH MODE: Combine items from closet with new suggestions in new_items. You can suggest 1-3 new clothing items per outfit to complete the look. Each new item MUST have: description, category, color, reasoning, estimated_price.' : itemSource === 'new' ? '🛍️ NEW ITEMS ONLY MODE: closet_item_ids should be [] (empty). ALL items must be suggested in new_items array. Create COMPLETE outfits with 3-5 new items (top, bottom OR dress, shoes, bag, accessories). Each new item MUST have: description, category, color, reasoning, estimated_price.' : ''}
+8. ${itemSource === 'closet' ? 'new_items must be [] UNLESS suggesting a bag (bags are mandatory even for closet-only)' : itemSource === 'mix' ? '🎨 MIX & MATCH MODE - CRITICAL RULES:\n   - Use 2-3 closet items MAX (NOT all closet items!)\n   - Suggest 1-2 NEW ESSENTIAL items to COMPLETE the outfit (e.g. if closet has dress, suggest shoes. If closet has top, suggest bottom + shoes)\n   - ONLY suggest items the user NEEDS, not accessories they already have\n   - DO NOT suggest bags if closet already has a bag in the outfit\n   - DO NOT suggest cardigans/sweaters in hot weather\n   - DO NOT suggest hats/accessories unless specifically needed\n   - Each new item: description, category, color, reasoning, estimated_price\n   - Example: Closet has "white tank" → suggest "Tan linen shorts" + "Tan sandals" to complete' : itemSource === 'new' ? '🛍️ NEW ITEMS ONLY MODE: closet_item_ids should be [] (empty). ALL items must be suggested in new_items array. Create COMPLETE outfits with 3-5 new items (top, bottom OR dress, shoes, bag, accessories). Each new item MUST have: description, category, color, reasoning, estimated_price.' : ''}
 
 9. ${temperature >= 70 ? 'NO long sleeves, NO sweaters, NO ribbed - too warm!' : temperature < 50 ? 'COLD WEATHER: MUST add outerwear if wearing a dress! For casual occasions, prefer pants over dresses in cold weather.' : ''}
 
@@ -885,7 +885,8 @@ ${appropriate.bags.length > 0 ? formatItems(appropriate.bags) : '⚠️ NO BAGS 
         {"description": "Tan leather loafers", "category": "shoes", "color": "tan", "reasoning": "Comfortable yet polished", "estimated_price": "$60-80"},
         {"description": "Structured tan tote bag", "category": "bag", "color": "tan", "reasoning": "Practical and matches the neutral palette", "estimated_price": "$70-90"}
       ]` : itemSource === 'mix' ? `[
-        {"description": "Gold hoop earrings", "category": "accessories", "color": "gold", "reasoning": "Adds polish to the outfit", "estimated_price": "$20-30"}
+        {"description": "Tan linen midi shorts", "category": "bottom", "color": "tan", "reasoning": "Completes the tank top from closet, perfect for warm weather", "estimated_price": "$40-50"},
+        {"description": "White platform sneakers", "category": "shoes", "color": "white", "reasoning": "Comfortable and matches the casual neutral palette", "estimated_price": "$60-80"}
       ]` : '[]'},
       "weather_rationale": "Why these work for ${temperature}°F",
       "style_rationale": "Why this fits ${occasion}",
@@ -931,7 +932,7 @@ CRITICAL RULES:
 
 7. ${temperature >= 70 ? 'WARM: No long sleeves, no sweaters, no ribbed!' : temperature < 50 ? 'COLD: Add outerwear! Prefer pants for casual.' : ''}
 
-8. ${itemSource === 'new' ? '🛍️ NEW ITEMS ONLY: Do NOT use closet_item_ids. ALL outfit pieces must be in new_items array (top/dress, bottom if needed, shoes, bag). Describe each item clearly with specific details (fabric, style, color). Include estimated_price for each.' : itemSource === 'mix' ? '🎨 MIX & MATCH: Use some closet items AND suggest 1-3 new items to complete the look. New items should complement what\'s in the closet.' : 'Only use provided item IDs. Dress = complete outfit (no extra top/bottom).'}`
+8. ${itemSource === 'new' ? '🛍️ NEW ITEMS ONLY: Do NOT use closet_item_ids. ALL outfit pieces must be in new_items array (top/dress, bottom if needed, shoes, bag). Describe each item clearly with specific details (fabric, style, color). Include estimated_price for each.' : itemSource === 'mix' ? '🎨 MIX & MATCH: Pick 2-3 closet items MAX. Suggest ESSENTIAL missing pieces ONLY (if have top, suggest bottom+shoes. If have dress, suggest shoes). NO random accessories. NO bags if already using closet bag. NO cardigans in hot weather.' : 'Only use provided item IDs. Dress = complete outfit (no extra top/bottom).'}`
         },
         { role: 'user', content: prompt }
       ],
