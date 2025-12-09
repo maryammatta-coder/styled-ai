@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { OCCASIONS } from '@/lib/utils/constants'
-import { X, Sparkles, ChevronLeft, ChevronRight, Heart, Loader2 } from 'lucide-react'
+import { X, Sparkles, ChevronLeft, ChevronRight, Heart, Loader2, ShoppingBag, Search } from 'lucide-react'
 
 interface OutfitOption {
   id: string
@@ -392,18 +392,45 @@ export default function GenerateOutfitPage() {
                 {/* New Items */}
                 {currentOutfit.outfit_data.new_items && currentOutfit.outfit_data.new_items.length > 0 && (
                   <div className="mb-4">
-                    <p className="text-sm font-medium text-dark-taupe mb-2">✨ Suggested New Items:</p>
-                    <div className="space-y-2">
+                    <p className="text-sm font-medium text-dark-taupe mb-3 flex items-center gap-2">
+                      <ShoppingBag className="w-4 h-4" />
+                      Suggested New Items
+                    </p>
+                    <div className="space-y-3">
                       {currentOutfit.outfit_data.new_items.map((item: any, i: number) => (
-                        <div key={i} className="bg-blush/30 p-3 rounded-2xl border border-taupe/10">
-                          <p className="font-medium text-sm text-dark-taupe">{item.description}</p>
-                          <div className="flex justify-between items-center mt-1">
-                            <p className="text-xs text-warm-grey capitalize">{item.category} • {item.color}</p>
-                            {item.estimated_price && (
-                              <p className="text-xs font-medium text-dark-taupe">{item.estimated_price}</p>
-                            )}
+                        <div
+                          key={i}
+                          className="bg-cream p-4 rounded-2xl border-2 border-dashed border-blush/60 relative"
+                        >
+                          {/* Suggested Item Badge */}
+                          <div className="absolute -top-2 left-4 px-3 py-0.5 bg-blush rounded-full">
+                            <span className="text-xs font-medium text-dark-taupe tracking-wide">SUGGESTED ITEM</span>
                           </div>
-                          <p className="text-xs text-warm-grey mt-1">{item.reasoning}</p>
+
+                          <div className="mt-2">
+                            <p className="font-medium text-sm text-dark-taupe mb-2">{item.description}</p>
+                            <div className="flex justify-between items-center mb-2">
+                              <p className="text-xs text-warm-grey capitalize">{item.category} • {item.color}</p>
+                              {item.estimated_price && (
+                                <p className="text-xs font-medium text-dark-taupe bg-beige px-2 py-1 rounded-full">
+                                  {item.estimated_price}
+                                </p>
+                              )}
+                            </div>
+                            <p className="text-xs text-warm-grey mb-3">{item.reasoning}</p>
+
+                            {/* Search Button */}
+                            <button
+                              onClick={() => {
+                                const searchQuery = encodeURIComponent(item.description)
+                                window.open(`https://www.google.com/search?q=${searchQuery}&tbm=isch`, '_blank')
+                              }}
+                              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-dark-taupe text-cream rounded-full hover:bg-dark-taupe/90 transition-all text-sm font-medium"
+                            >
+                              <Search className="w-4 h-4" />
+                              Search for this item
+                            </button>
+                          </div>
                         </div>
                       ))}
                     </div>
