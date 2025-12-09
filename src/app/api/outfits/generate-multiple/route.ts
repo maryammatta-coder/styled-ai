@@ -773,7 +773,75 @@ export async function POST(request: NextRequest) {
       ? occasionGuidance.dressy 
       : occasionGuidance.casual
 
-    const prompt = `You are a professional fashion stylist creating ${count} outfits.
+    // Different prompt strategies based on item source
+    let prompt = ''
+
+    if (itemSource === 'mix' || itemSource === 'new') {
+      // MIX & MATCH / NEW ITEMS: Create outfit concepts FIRST, then match to closet
+      prompt = `You are a professional fashion stylist creating ${count} outfit IDEAS for a client.
+
+🎯 YOUR TASK: Design ${count} complete, cohesive outfit concepts based on the occasion and weather.
+
+## CONTEXT
+- Occasion: ${occasion}
+- Formality: ${formalityCat.toUpperCase()} (${formalityRules.description})
+- Weather: ${temperature}°F (${weatherCat.toUpperCase()})
+- Client Style: ${user.style_vibe?.join(', ') || 'Classic'}
+${user.avoid_colors && user.avoid_colors.length > 0 ? `- 🚫 AVOID THESE COLORS: ${user.avoid_colors.join(', ')}` : ''}
+${user.color_palette && user.color_palette.length > 0 ? `- Preferred colors: ${user.color_palette.join(', ')}` : ''}
+
+## WEATHER RULES (${temperature}°F = ${weatherCat.toUpperCase()})
+${weatherRules.note}
+FORBIDDEN: ${weatherRules.forbidden.join(', ')}
+
+## FORMALITY RULES
+${outfitStructure}
+Appropriate shoe types: ${formalityRules.shoeTypes.join(', ')}
+${formalityCat === 'casual' ? '🚨 CASUAL = NO HEELS. Only sneakers, flats, loafers, slides' : ''}
+${formalityCat === 'smartCasual' || formalityCat === 'dressy' || formalityCat === 'formal' ? '🚨 NO SNEAKERS for this formality level' : ''}
+
+## YOUR JOB
+Create ${count} COMPLETE outfit concepts. For each piece, describe:
+- What the item is (e.g., "white linen tank top", "tan linen shorts")
+- Category (top, bottom, dress, shoes, bag, outerwear)
+- Color
+- Why it works for this occasion/weather
+
+${itemSource === 'mix' ? `
+🎨 MIX & MATCH MODE RULES:
+- Design the outfit you envision
+- We'll check the client's closet to see what they already own
+- Items they don't own will be suggested as new purchases
+- Focus on creating COHESIVE looks, not using maximum closet items
+` : `
+🛍️ NEW ITEMS ONLY MODE RULES:
+- Suggest ONLY items the client does NOT currently own
+- Create complete shopping lists for fresh outfit ideas
+- We'll verify these items aren't in their closet already
+`}
+
+## RESPONSE FORMAT (JSON only)
+{
+  "outfits": [
+    {
+      "label": "Outfit name",
+      "outfit_concept": {
+        "top": {"description": "White linen tank top", "color": "white", "category": "top", "reasoning": "Lightweight for hot weather"},
+        "bottom": {"description": "Tan linen shorts", "color": "tan", "category": "bottom", "reasoning": "Breathable and matches the casual vibe"},
+        "shoes": {"description": "White platform sneakers", "color": "white", "category": "shoes", "reasoning": "Comfortable and matches the neutral palette"},
+        "bag": {"description": "Tan crossbody bag", "color": "tan", "category": "bag", "reasoning": "Hands-free and coordinates with shorts"}
+      },
+      "weather_rationale": "Why this works for ${temperature}°F",
+      "style_rationale": "Why this fits ${occasion}"
+    }
+  ]
+}
+
+Create ${count} different outfit concepts. Each outfit MUST have: top+bottom OR dress, shoes, and bag.`
+
+    } else {
+      // CLOSET ONLY: Look at closet first (current behavior)
+      prompt = `You are a professional fashion stylist creating ${count} outfits.
 
 🎯 PRIMARY GOAL: CREATE COHESIVE, WEARABLE OUTFITS
 - Prioritize outfit cohesion over variety
@@ -896,6 +964,7 @@ ${appropriate.bags.length > 0 ? formatItems(appropriate.bags) : '⚠️ NO BAGS 
 }
 
 Create ${count} DIFFERENT outfits. Every outfit MUST have shoes AND a bag!`
+    }
 
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
@@ -949,6 +1018,98 @@ CRITICAL RULES:
 
     // Validate and fix outfits
     const validatedOutfits = (outfitData.outfits || []).map((outfit: any) => {
+      // For MIX/NEW modes: AI returned outfit_concept, now match to closet
+      if ((itemSource === 'mix' || itemSource === 'new') && outfit.outfit_concept) {
+        console.log(`\n🎨 Processing ${itemSource} mode outfit concept:`, outfit.label)
+
+        const concept = outfit.outfit_concept
+        const matchedClosetIds: string[] = []
+        const newItemsSuggestions: any[] = []
+
+        // Helper to find matching closet item
+        const findClosetMatch = (conceptItem: any) => {
+          if (!conceptItem) return null
+
+          const category = conceptItem.category?.toLowerCase()
+          const color = conceptItem.color?.toLowerCase()
+          const desc = conceptItem.description?.toLowerCase() || ''
+
+          // Search in appropriate closet items for this category
+          let categoryItems: ClosetItem[] = []
+          if (category === 'top') categoryItems = closetItems.filter((i: ClosetItem) => categorizeItem(i) === 'top')
+          else if (category === 'bottom') categoryItems = closetItems.filter((i: ClosetItem) => categorizeItem(i) === 'bottom')
+          else if (category === 'dress') categoryItems = closetItems.filter((i: ClosetItem) => categorizeItem(i) === 'dress')
+          else if (category === 'shoes') categoryItems = closetItems.filter((i: ClosetItem) => categorizeItem(i) === 'shoes')
+          else if (category === 'bag') categoryItems = closetItems.filter((i: ClosetItem) => {
+            const name = (i.name || '').toLowerCase()
+            return name.includes('bag') || name.includes('purse') || name.includes('clutch') || name.includes('tote')
+          })
+
+          // Try to find color match first
+          let match = categoryItems.find((i: ClosetItem) => {
+            const itemColor = (i.color || '').toLowerCase()
+            const itemName = (i.name || '').toLowerCase()
+            // Check if colors match (fuzzy matching)
+            if (color && (itemColor.includes(color) || color.includes(itemColor))) return true
+            // Check if description keywords match item name
+            if (desc && itemName.includes(desc.split(' ')[0])) return true
+            return false
+          })
+
+          // Fallback: just get first item in category if no match
+          if (!match && categoryItems.length > 0) {
+            match = categoryItems[0]
+          }
+
+          return match
+        }
+
+        // Process each piece in the outfit concept
+        for (const [key, conceptItem] of Object.entries(concept)) {
+          if (!conceptItem || typeof conceptItem !== 'object') continue
+
+          const item = conceptItem as any
+          const closetMatch = findClosetMatch(item)
+
+          if (itemSource === 'mix') {
+            // MIX MODE: Use closet item if found, otherwise suggest new
+            if (closetMatch && !matchedClosetIds.includes(closetMatch.id)) {
+              matchedClosetIds.push(closetMatch.id)
+              console.log(`  ✓ Found in closet: ${closetMatch.name} (${item.category})`)
+            } else {
+              newItemsSuggestions.push({
+                description: item.description,
+                category: item.category,
+                color: item.color,
+                reasoning: item.reasoning || `Completes the outfit for ${occasion}`,
+                estimated_price: '$40-80'
+              })
+              console.log(`  + Suggesting new: ${item.description} (${item.category})`)
+            }
+          } else if (itemSource === 'new') {
+            // NEW MODE: Only suggest if NOT in closet
+            if (closetMatch) {
+              console.log(`  ✗ Already own: ${closetMatch.name} - skipping this item`)
+            } else {
+              newItemsSuggestions.push({
+                description: item.description,
+                category: item.category,
+                color: item.color,
+                reasoning: item.reasoning || `Perfect for ${occasion}`,
+                estimated_price: '$40-80'
+              })
+              console.log(`  + Suggesting new: ${item.description} (${item.category})`)
+            }
+          }
+        }
+
+        // Update outfit with matched items
+        outfit.closet_item_ids = matchedClosetIds
+        outfit.new_items = newItemsSuggestions
+
+        console.log(`  Result: ${matchedClosetIds.length} closet items, ${newItemsSuggestions.length} new suggestions\n`)
+      }
+
       // For closet-only mode, only keep bag suggestions in new_items
       if (itemSource === 'closet') {
         outfit.new_items = (outfit.new_items || []).filter((item: any) => {
