@@ -855,7 +855,7 @@ ${appropriate.bags.length > 0 ? formatItems(appropriate.bags) : '⚠️ NO BAGS 
 
 7. Only use IDs from the lists above
 
-8. ${itemSource === 'closet' ? 'new_items must be [] UNLESS suggesting a bag (bags are mandatory even for closet-only)' : ''}
+8. ${itemSource === 'closet' ? 'new_items must be [] UNLESS suggesting a bag (bags are mandatory even for closet-only)' : itemSource === 'mix' ? '🎨 MIX & MATCH MODE: Combine items from closet with new suggestions in new_items. You can suggest 1-3 new clothing items per outfit to complete the look. Each new item MUST have: description, category, color, reasoning, estimated_price.' : itemSource === 'new' ? '🛍️ NEW ITEMS ONLY MODE: closet_item_ids should be [] (empty). ALL items must be suggested in new_items array. Create COMPLETE outfits with 3-5 new items (top, bottom OR dress, shoes, bag, accessories). Each new item MUST have: description, category, color, reasoning, estimated_price.' : ''}
 
 9. ${temperature >= 70 ? 'NO long sleeves, NO sweaters, NO ribbed - too warm!' : temperature < 50 ? 'COLD WEATHER: MUST add outerwear if wearing a dress! For casual occasions, prefer pants over dresses in cold weather.' : ''}
 
@@ -878,8 +878,15 @@ ${appropriate.bags.length > 0 ? formatItems(appropriate.bags) : '⚠️ NO BAGS 
   "outfits": [
     {
       "label": "Name",
-      "closet_item_ids": ["id1", "id2", "id3"],
-      "new_items": [],
+      "closet_item_ids": ${itemSource === 'new' ? '[]' : '["id1", "id2", "id3"]'},
+      "new_items": ${itemSource === 'new' ? `[
+        {"description": "White linen button-down shirt", "category": "top", "color": "white", "reasoning": "Lightweight and breathable for warm weather", "estimated_price": "$40-60"},
+        {"description": "High-waisted wide-leg trousers", "category": "bottom", "color": "beige", "reasoning": "Elegant silhouette perfect for the occasion", "estimated_price": "$50-70"},
+        {"description": "Tan leather loafers", "category": "shoes", "color": "tan", "reasoning": "Comfortable yet polished", "estimated_price": "$60-80"},
+        {"description": "Structured tan tote bag", "category": "bag", "color": "tan", "reasoning": "Practical and matches the neutral palette", "estimated_price": "$70-90"}
+      ]` : itemSource === 'mix' ? `[
+        {"description": "Gold hoop earrings", "category": "accessories", "color": "gold", "reasoning": "Adds polish to the outfit", "estimated_price": "$20-30"}
+      ]` : '[]'},
       "weather_rationale": "Why these work for ${temperature}°F",
       "style_rationale": "Why this fits ${occasion}",
       "styling_tips": ["Tip 1", "Tip 2"]
@@ -924,7 +931,7 @@ CRITICAL RULES:
 
 7. ${temperature >= 70 ? 'WARM: No long sleeves, no sweaters, no ribbed!' : temperature < 50 ? 'COLD: Add outerwear! Prefer pants for casual.' : ''}
 
-8. Only use provided item IDs. Dress = complete outfit (no extra top/bottom).`
+8. ${itemSource === 'new' ? '🛍️ NEW ITEMS ONLY: Do NOT use closet_item_ids. ALL outfit pieces must be in new_items array (top/dress, bottom if needed, shoes, bag). Describe each item clearly with specific details (fabric, style, color). Include estimated_price for each.' : itemSource === 'mix' ? '🎨 MIX & MATCH: Use some closet items AND suggest 1-3 new items to complete the look. New items should complement what\'s in the closet.' : 'Only use provided item IDs. Dress = complete outfit (no extra top/bottom).'}`
         },
         { role: 'user', content: prompt }
       ],
@@ -941,7 +948,14 @@ CRITICAL RULES:
 
     // Validate and fix outfits
     const validatedOutfits = (outfitData.outfits || []).map((outfit: any) => {
-      if (itemSource === 'closet') outfit.new_items = []
+      // For closet-only mode, only keep bag suggestions in new_items
+      if (itemSource === 'closet') {
+        outfit.new_items = (outfit.new_items || []).filter((item: any) => {
+          const cat = (item.category || '').toLowerCase()
+          const desc = (item.description || '').toLowerCase()
+          return cat.includes('bag') || desc.includes('bag') || desc.includes('purse')
+        })
+      }
 
       // Validate IDs exist
       let validIds = (outfit.closet_item_ids || []).filter((id: string) =>
