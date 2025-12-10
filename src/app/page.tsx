@@ -138,7 +138,13 @@ export default function Home() {
       {/* Footer */}
       <footer className="border-t border-taupe/20 py-8">
         <div className="max-w-6xl mx-auto px-6 text-center text-warm-grey text-sm">
-          <p>© 2024 styled.ai • Your AI Personal Stylist</p>
+          <p className="mb-2">© 2024 Styled.AI • Your AI Personal Stylist</p>
+          <a
+            href="/privacy"
+            className="text-warm-grey hover:text-dark-taupe transition-colors underline text-xs"
+          >
+            Privacy Policy
+          </a>
         </div>
       </footer>
     </div>

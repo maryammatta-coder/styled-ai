@@ -335,6 +335,18 @@ export default function OnboardingPage() {
             </button>
           </div>
         )}
+
+        {/* Privacy Policy Link */}
+        <div className="pb-4 text-center">
+          <a
+            href="/privacy"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-warm-grey hover:text-dark-taupe transition-colors text-xs tracking-wide underline"
+          >
+            Privacy Policy
+          </a>
+        </div>
       </div>
     )
   }
