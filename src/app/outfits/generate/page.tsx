@@ -1,10 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { OCCASIONS } from '@/lib/utils/constants'
-import { X, Sparkles, ChevronLeft, ChevronRight, Heart, Loader2, ShoppingBag, Search } from 'lucide-react'
+import { X, Sparkles, ChevronLeft, ChevronRight, Heart, Loader2, ShoppingBag, Search, Mic, MicOff } from 'lucide-react'
 
 interface OutfitOption {
   id: string
@@ -30,9 +30,45 @@ export default function GenerateOutfitPage() {
   const [currentOutfitIndex, setCurrentOutfitIndex] = useState(0)
   const [savingOutfit, setSavingOutfit] = useState(false)
   const [step, setStep] = useState<'setup' | 'results'>('setup')
-  
+
+  // Voice input state
+  const [isRecording, setIsRecording] = useState(false)
+  const [transcript, setTranscript] = useState('')
+  const [voiceMode, setVoiceMode] = useState(false)
+  const recognitionRef = useRef<any>(null)
+
   const router = useRouter()
   const supabase = createClient()
+
+  // Initialize Speech Recognition
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+      if (SpeechRecognition) {
+        const recognition = new SpeechRecognition()
+        recognition.continuous = false
+        recognition.interimResults = false
+        recognition.lang = 'en-US'
+
+        recognition.onresult = (event: any) => {
+          const transcriptText = event.results[0][0].transcript
+          setTranscript(transcriptText)
+          setIsRecording(false)
+        }
+
+        recognition.onerror = (event: any) => {
+          console.error('Speech recognition error:', event.error)
+          setIsRecording(false)
+        }
+
+        recognition.onend = () => {
+          setIsRecording(false)
+        }
+
+        recognitionRef.current = recognition
+      }
+    }
+  }, [])
 
   const getFormalityLabel = (value: number) => {
     if (value <= 20) return 'Very Casual'
@@ -40,6 +76,114 @@ export default function GenerateOutfitPage() {
     if (value <= 60) return 'Smart Casual'
     if (value <= 80) return 'Dressy'
     return 'Formal'
+  }
+
+  const startVoiceInput = () => {
+    if (recognitionRef.current && !isRecording) {
+      setTranscript('')
+      setVoiceMode(true)
+      setIsRecording(true)
+      recognitionRef.current.start()
+    }
+  }
+
+  const stopVoiceInput = () => {
+    if (recognitionRef.current && isRecording) {
+      recognitionRef.current.stop()
+    }
+  }
+
+  const generateFromVoice = async () => {
+    if (!transcript) return
+
+    setLoading(true)
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        router.push('/login')
+        return
+      }
+
+      // Fetch user data
+      const { data: userData } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', user.id)
+        .single()
+
+      // Fetch weather
+      let weatherData = null
+      try {
+        const getWeatherByLocation = async () => {
+          return new Promise((resolve) => {
+            if (!navigator.geolocation) {
+              resolve(null)
+              return
+            }
+            navigator.geolocation.getCurrentPosition(
+              async (position) => {
+                try {
+                  const response = await fetch(
+                    `/api/weather?lat=${position.coords.latitude}&lon=${position.coords.longitude}`
+                  )
+                  const data = await response.json()
+                  resolve(data.success ? data.weather : null)
+                } catch {
+                  resolve(null)
+                }
+              },
+              () => resolve(null),
+              { timeout: 5000 }
+            )
+          })
+        }
+
+        weatherData = await getWeatherByLocation()
+
+        if (!weatherData && userData?.home_city) {
+          const response = await fetch(`/api/weather?city=${encodeURIComponent(userData.home_city)}`)
+          const data = await response.json()
+          if (data.success) {
+            weatherData = data.weather
+          }
+        }
+      } catch (err) {
+        console.error('Weather fetch error:', err)
+      }
+
+      // Send voice prompt to API
+      const response = await fetch('/api/outfits/generate-voice', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user.id,
+          voicePrompt: transcript,
+          weather: weatherData,
+          userPreferences: {
+            style_vibe: userData?.style_vibe || [],
+            color_palette: userData?.color_palette || [],
+            avoid_colors: userData?.avoid_colors || [],
+          }
+        })
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) throw new Error(data.error || 'Failed to generate outfits')
+
+      if (data.success && data.outfits && data.outfits.length > 0) {
+        setOutfitOptions(data.outfits)
+        setCurrentOutfitIndex(0)
+        setStep('results')
+      } else {
+        throw new Error('No outfits generated')
+      }
+    } catch (error: any) {
+      console.error(error)
+      alert(error.message || 'Failed to generate outfits')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const generateOutfits = async () => {
@@ -189,6 +333,89 @@ export default function GenerateOutfitPage() {
               <button onClick={() => router.push('/dashboard')} className="p-2 hover:bg-taupe/20 rounded-full transition-colors">
                 <X className="w-6 h-6 text-warm-grey" />
               </button>
+            </div>
+
+            {/* Voice Input Section */}
+            <div className="mb-10 pb-10 border-b border-taupe/20">
+              <div className="text-center">
+                <h3 className="text-sm font-medium text-warm-grey tracking-widest uppercase mb-6">
+                  Try Voice Input
+                </h3>
+
+                {!voiceMode ? (
+                  <button
+                    onClick={startVoiceInput}
+                    className="mx-auto flex items-center gap-3 px-8 py-4 bg-blush text-dark-taupe rounded-full font-medium hover:bg-blush/80 transition-all shadow-sm"
+                  >
+                    <Mic className="w-5 h-5" />
+                    Tell me what you need
+                  </button>
+                ) : (
+                  <div className="space-y-4">
+                    {/* Recording Animation */}
+                    {isRecording && (
+                      <div className="flex flex-col items-center gap-4">
+                        <div className="relative">
+                          <button
+                            onClick={stopVoiceInput}
+                            className="p-6 bg-blush rounded-full shadow-lg hover:bg-blush/80 transition-all relative z-10"
+                          >
+                            <Mic className="w-8 h-8 text-dark-taupe" />
+                          </button>
+                          {/* Pulsing rings */}
+                          <div className="absolute inset-0 rounded-full bg-blush animate-ping opacity-75"></div>
+                          <div className="absolute inset-0 rounded-full bg-blush animate-pulse opacity-50" style={{ animationDelay: '0.3s' }}></div>
+                        </div>
+                        <p className="text-warm-grey text-sm animate-pulse">Listening...</p>
+                      </div>
+                    )}
+
+                    {/* Transcript Display */}
+                    {transcript && !isRecording && (
+                      <div className="space-y-4">
+                        <div className="bg-cream p-5 rounded-2xl border border-taupe/20">
+                          <p className="text-dark-taupe text-center italic">"{transcript}"</p>
+                        </div>
+
+                        <div className="flex gap-3">
+                          <button
+                            onClick={() => {
+                              setVoiceMode(false)
+                              setTranscript('')
+                            }}
+                            className="flex-1 px-6 py-3 border border-taupe/30 bg-cream rounded-full hover:bg-taupe/20 transition font-medium text-dark-taupe"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            onClick={generateFromVoice}
+                            disabled={loading}
+                            className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-dark-taupe text-cream rounded-full hover:bg-dark-taupe/90 transition font-medium disabled:opacity-50"
+                          >
+                            {loading ? (
+                              <>
+                                <Loader2 className="w-5 h-5 animate-spin" />
+                                Generating...
+                              </>
+                            ) : (
+                              <>
+                                <Sparkles className="w-5 h-5" />
+                                Generate Outfits
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {!voiceMode && (
+                  <p className="text-xs text-warm-grey mt-4">
+                    Or use the options below
+                  </p>
+                )}
+              </div>
             </div>
 
             {/* Item Source Selection */}
