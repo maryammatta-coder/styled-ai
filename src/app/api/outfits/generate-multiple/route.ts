@@ -809,8 +809,10 @@ Create ${count} COMPLETE outfit concepts. For each piece, describe:
 
 ## BAG/PURSE OPTIONS (all types allowed):
 - Handbags, purses, shoulder bags, crossbody bags, tote bags, clutches, satchels, mini bags
-- Choose bag style based on formality: casual = totes/crossbody, dressy = clutches/structured bags
-- All bag types are valid - don't default to only crossbody or tote
+- ALL bag types work for ALL formality levels - it's about the style/material, not the bag type
+- Casual: leather handbags, totes, crossbody, shoulder bags all work
+- Dressy: structured bags, clutches, elegant shoulder bags, mini bags all work
+- Don't restrict yourself to only crossbody/tote - use variety
 
 ${itemSource === 'mix' ? `
 🎨 MIX & MATCH MODE RULES:
