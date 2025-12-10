@@ -83,8 +83,8 @@ export default function WeatherDisplay({
   if (loading) {
     return (
       <div className={`flex items-center gap-2 ${compact ? 'text-sm' : ''}`}>
-        <RefreshCw className="w-4 h-4 animate-spin text-gray-400" />
-        <span className="text-gray-500">Loading weather...</span>
+        <RefreshCw className="w-4 h-4 animate-spin text-warm-grey" />
+        <span className="text-warm-grey">Loading weather...</span>
       </div>
     );
   }
@@ -92,10 +92,10 @@ export default function WeatherDisplay({
   if (error || !weather) {
     return (
       <div className={`flex items-center gap-2 ${compact ? 'text-sm' : ''}`}>
-        <Cloud className="w-4 h-4 text-gray-400" />
-        <span className="text-gray-500">{error || 'Weather unavailable'}</span>
+        <Cloud className="w-4 h-4 text-warm-grey" />
+        <span className="text-warm-grey">{error || 'Weather unavailable'}</span>
         {showRefresh && (
-          <button onClick={fetchWeather} className="text-blue-500 hover:text-blue-600">
+          <button onClick={fetchWeather} className="text-warm-grey hover:text-dark-taupe">
             <RefreshCw className="w-4 h-4" />
           </button>
         )}
@@ -107,12 +107,12 @@ export default function WeatherDisplay({
     return (
       <div className="flex items-center gap-2 text-sm">
         {getWeatherIcon(weather.condition)}
-        <span className="font-medium">{weather.temperature}°F</span>
-        <span className="text-gray-500">{weather.city}</span>
+        <span className="font-medium text-dark-taupe">{weather.temperature}°F</span>
+        <span className="text-warm-grey">{weather.city}</span>
         {showRefresh && (
-          <button 
-            onClick={fetchWeather} 
-            className="text-gray-400 hover:text-gray-600 ml-1"
+          <button
+            onClick={fetchWeather}
+            className="text-warm-grey hover:text-dark-taupe ml-1"
             title="Refresh weather"
           >
             <RefreshCw className="w-3 h-3" />
