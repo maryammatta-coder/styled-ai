@@ -1115,7 +1115,63 @@ IMPORTANT: You MUST respond with valid JSON only. No markdown formatting, no cod
         outfit.closet_item_ids = matchedClosetIds
         outfit.new_items = newItemsSuggestions
 
-        console.log(`  Result: ${matchedClosetIds.length} closet items, ${newItemsSuggestions.length} new suggestions\n`)
+        console.log(`  Result: ${matchedClosetIds.length} closet items, ${newItemsSuggestions.length} new suggestions`)
+
+        // ENFORCE MIX & MATCH RULES: Must have at least 1 closet item AND 1 new item
+        if (itemSource === 'mix') {
+          // If all items are from closet, force one to be a new suggestion
+          if (newItemsSuggestions.length === 0 && matchedClosetIds.length > 0) {
+            // Remove the least essential item (bag or accessory first, then shoes)
+            const lastItemId = matchedClosetIds[matchedClosetIds.length - 1]
+            const lastItem = closetItems.find((i: ClosetItem) => i.id === lastItemId)
+
+            if (lastItem) {
+              matchedClosetIds.pop()
+              const category = categorizeItem(lastItem)
+              newItemsSuggestions.push({
+                description: `${lastItem.color || 'Stylish'} ${category}`,
+                category: category,
+                color: lastItem.color || 'neutral',
+                reasoning: `Complete your ${occasion} look with a new ${category}`,
+                estimated_price: '$40-80'
+              })
+              console.log(`  ⚠️ Forced new item: removed ${lastItem.name} from closet, suggesting new ${category}`)
+            }
+          }
+
+          // If all items are new suggestions, force one to be from closet
+          if (matchedClosetIds.length === 0 && newItemsSuggestions.length > 0) {
+            // Try to match at least ONE item from closet (preferably top or bottom)
+            const conceptItems = Object.values(concept).filter((item: any) => item && typeof item === 'object')
+
+            for (const conceptItem of conceptItems) {
+              const item = conceptItem as any
+              const closetMatch = findClosetMatch(item)
+
+              if (closetMatch && !matchedClosetIds.includes(closetMatch.id)) {
+                matchedClosetIds.push(closetMatch.id)
+                // Remove this item from new suggestions
+                newItemsSuggestions.splice(
+                  newItemsSuggestions.findIndex(s => s.category === item.category),
+                  1
+                )
+                console.log(`  ⚠️ Forced closet item: added ${closetMatch.name} from closet`)
+                break
+              }
+            }
+
+            // If still no closet items, add ANY appropriate item from closet
+            if (matchedClosetIds.length === 0 && closetItems.length > 0) {
+              const anyAppropriate = closetItems[0]
+              matchedClosetIds.push(anyAppropriate.id)
+              console.log(`  ⚠️ Forced any closet item: added ${anyAppropriate.name}`)
+            }
+          }
+
+          outfit.closet_item_ids = matchedClosetIds
+          outfit.new_items = newItemsSuggestions
+          console.log(`  Final result: ${matchedClosetIds.length} closet items, ${newItemsSuggestions.length} new suggestions\n`)
+        }
       }
 
       // For closet-only mode, only keep bag suggestions in new_items
