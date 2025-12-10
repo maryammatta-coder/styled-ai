@@ -108,7 +108,7 @@ export default function WeatherDisplay({
       <div className="flex items-center gap-2 text-sm">
         {getWeatherIcon(weather.condition)}
         <span className="font-medium text-dark-taupe">{weather.temperature}°F</span>
-        <span className="text-warm-grey">{weather.city}</span>
+        <span className="text-dark-taupe">{weather.city}</span>
         {showRefresh && (
           <button
             onClick={fetchWeather}
