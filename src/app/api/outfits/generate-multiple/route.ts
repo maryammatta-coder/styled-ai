@@ -802,10 +802,15 @@ ${formalityCat === 'smartCasual' || formalityCat === 'dressy' || formalityCat ==
 
 ## YOUR JOB
 Create ${count} COMPLETE outfit concepts. For each piece, describe:
-- What the item is (e.g., "white linen tank top", "tan linen shorts")
+- What the item is (e.g., "white linen tank top", "tan linen shorts", "tan leather handbag")
 - Category (top, bottom, dress, shoes, bag, outerwear)
 - Color
 - Why it works for this occasion/weather
+
+## BAG/PURSE OPTIONS (all types allowed):
+- Handbags, purses, shoulder bags, crossbody bags, tote bags, clutches, satchels, mini bags
+- Choose bag style based on formality: casual = totes/crossbody, dressy = clutches/structured bags
+- All bag types are valid - don't default to only crossbody or tote
 
 ${itemSource === 'mix' ? `
 🎨 MIX & MATCH MODE RULES:
@@ -829,7 +834,7 @@ ${itemSource === 'mix' ? `
         "top": {"description": "White linen tank top", "color": "white", "category": "top", "reasoning": "Lightweight for hot weather"},
         "bottom": {"description": "Tan linen shorts", "color": "tan", "category": "bottom", "reasoning": "Breathable and matches the casual vibe"},
         "shoes": {"description": "White platform sneakers", "color": "white", "category": "shoes", "reasoning": "Comfortable and matches the neutral palette"},
-        "bag": {"description": "Tan crossbody bag", "color": "tan", "category": "bag", "reasoning": "Hands-free and coordinates with shorts"}
+        "bag": {"description": "Tan leather shoulder bag", "color": "tan", "category": "bag", "reasoning": "Versatile and coordinates with the neutral palette"}
       },
       "weather_rationale": "Why this works for ${temperature}°F",
       "style_rationale": "Why this fits ${occasion}"
