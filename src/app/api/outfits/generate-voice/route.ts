@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import OpenAI from 'openai'
+import Anthropic from '@anthropic-ai/sdk'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+const anthropic = new Anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY,
 })
 
 export async function POST(request: NextRequest) {
@@ -54,12 +54,10 @@ export async function POST(request: NextRequest) {
       : 'User has no items in closet yet'
 
     // Generate outfits based on voice prompt
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [
-        {
-          role: 'system',
-          content: `You are an expert AI fashion stylist. The user will describe what they need in natural language.
+    const completion = await anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 4096,
+      system: `You are an expert AI fashion stylist. The user will describe what they need in natural language.
 Your job is to understand their request and generate 3 outfit suggestions.
 
 CONTEXT:
@@ -96,8 +94,10 @@ RULES:
 2. If they have closet items and didn't specify "new only", try to use them
 3. Keep it cohesive and weather-appropriate
 4. Match their described vibe/mood
-5. Return exactly 3 outfit options`,
-        },
+5. Return exactly 3 outfit options
+
+IMPORTANT: Respond with valid JSON only. No markdown formatting, no code blocks.`,
+      messages: [
         {
           role: 'user',
           content: `User said: "${voicePrompt}"
@@ -105,11 +105,11 @@ RULES:
 Please generate 3 outfit suggestions based on this request.`,
         },
       ],
-      response_format: { type: 'json_object' },
       temperature: 0.8,
     })
 
-    const result = JSON.parse(completion.choices[0]?.message?.content || '{}')
+    const responseText = completion.content[0]?.type === 'text' ? completion.content[0].text : '{}'
+    const result = JSON.parse(responseText)
 
     if (!result.outfits || result.outfits.length === 0) {
       return NextResponse.json(

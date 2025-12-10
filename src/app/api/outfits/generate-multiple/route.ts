@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import OpenAI from 'openai'
+import Anthropic from '@anthropic-ai/sdk'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+const anthropic = new Anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY,
 })
 
 interface ClosetItem {
@@ -973,12 +973,10 @@ ${appropriate.bags.length > 0 ? formatItems(appropriate.bags) : '⚠️ NO BAGS 
 Create ${count} DIFFERENT outfits. Every outfit MUST have shoes AND a bag!`
     }
 
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [
-        {
-          role: 'system',
-          content: `You are an expert fashion stylist. Your PRIMARY GOAL is creating COHESIVE, WEARABLE outfits.
+    const completion = await anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 4096,
+      system: `You are an expert fashion stylist. Your PRIMARY GOAL is creating COHESIVE, WEARABLE outfits.
 
 CRITICAL RULES:
 1. COHESION OVER VARIETY: Don't force variety if it sacrifices good style. Choose items that work together. It's OK to reuse the same shoes/bag in multiple outfits if they work best. DO NOT force different shoes for each outfit.
@@ -1008,18 +1006,21 @@ CRITICAL RULES:
 
 7. ${temperature >= 70 ? 'WARM: No long sleeves, no sweaters, no ribbed!' : temperature < 50 ? 'COLD: Add outerwear! Prefer pants for casual.' : ''}
 
-8. ${itemSource === 'new' ? '🛍️ NEW ITEMS ONLY: Do NOT use closet_item_ids. ALL outfit pieces must be in new_items array (top/dress, bottom if needed, shoes, bag). Describe each item clearly with specific details (fabric, style, color). Include estimated_price for each.' : itemSource === 'mix' ? '🎨 MIX & MATCH: Pick 2-3 closet items MAX. Suggest ESSENTIAL missing pieces ONLY (if have top, suggest bottom+shoes. If have dress, suggest shoes). NO random accessories. NO bags if already using closet bag. NO cardigans in hot weather.' : 'Only use provided item IDs. Dress = complete outfit (no extra top/bottom).'}`
-        },
+8. ${itemSource === 'new' ? '🛍️ NEW ITEMS ONLY: Do NOT use closet_item_ids. ALL outfit pieces must be in new_items array (top/dress, bottom if needed, shoes, bag). Describe each item clearly with specific details (fabric, style, color). Include estimated_price for each.' : itemSource === 'mix' ? '🎨 MIX & MATCH: Pick 2-3 closet items MAX. Suggest ESSENTIAL missing pieces ONLY (if have top, suggest bottom+shoes. If have dress, suggest shoes). NO random accessories. NO bags if already using closet bag. NO cardigans in hot weather.' : 'Only use provided item IDs. Dress = complete outfit (no extra top/bottom).'}
+
+IMPORTANT: You MUST respond with valid JSON only. No markdown formatting, no code blocks, just pure JSON.`,
+      messages: [
         { role: 'user', content: prompt }
       ],
-      response_format: { type: 'json_object' },
       temperature: 0.7,
     })
 
     let outfitData
     try {
-      outfitData = JSON.parse(completion.choices[0]?.message?.content || '{}')
-    } catch {
+      const responseText = completion.content[0]?.type === 'text' ? completion.content[0].text : '{}'
+      outfitData = JSON.parse(responseText)
+    } catch (error) {
+      console.error('Failed to parse Claude response:', error)
       return NextResponse.json({ success: false, error: 'Failed to parse response' }, { status: 500 })
     }
 
@@ -1508,17 +1509,18 @@ Respond with JSON:
 }`
 
       try {
-        const regenCompletion = await openai.chat.completions.create({
-          model: 'gpt-4o-mini',
+        const regenCompletion = await anthropic.messages.create({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 1024,
+          system: 'You are a fashion stylist. Write ONE BRIEF description (2-3 sentences max, under 80 words). Cover both weather and style. Be conversational, not a list. IMPORTANT: Respond with valid JSON only.',
           messages: [
-            { role: 'system', content: 'You are a fashion stylist. Write ONE BRIEF description (2-3 sentences max, under 80 words). Cover both weather and style. Be conversational, not a list.' },
             { role: 'user', content: regenPrompt }
           ],
-          response_format: { type: 'json_object' },
           temperature: 0.5,  // Lower temperature for more accurate descriptions
         })
 
-        const regenData = JSON.parse(regenCompletion.choices[0]?.message?.content || '{}')
+        const regenResponseText = regenCompletion.content[0]?.type === 'text' ? regenCompletion.content[0].text : '{}'
+        const regenData = JSON.parse(regenResponseText)
         outfit.rationale = regenData.rationale || `Perfect for ${occasion} in ${temperature}°F weather`
         // Keep legacy fields for backward compatibility
         outfit.weather_rationale = ''
