@@ -22,6 +22,15 @@ export default function DashboardPage() {
 
   const loadUserData = async () => {
     try {
+      // Check if onboarding is completed
+      if (typeof window !== 'undefined') {
+        const onboardingCompleted = localStorage.getItem('onboarding_completed')
+        if (!onboardingCompleted) {
+          router.push('/onboarding')
+          return
+        }
+      }
+
       // First try to get the session to ensure it's loaded
       const { data: { session } } = await supabase.auth.getSession()
 
