@@ -68,43 +68,65 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const response = await fetch(url);
+    // Add timeout to prevent hanging
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
 
-    if (!response.ok) {
-      if (response.status === 404) {
-        return NextResponse.json(
-          { success: false, error: 'City not found' },
-          { status: 404 }
-        );
+    try {
+      const response = await fetch(url, { signal: controller.signal });
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          // Return fallback weather for 404s instead of failing
+          console.log('City not found, using fallback weather');
+          return NextResponse.json({
+            success: true,
+            weather: getFallbackWeather(city || 'Unknown'),
+            isFallback: true,
+          });
+        }
+        throw new Error(`Weather API error: ${response.status}`);
       }
-      throw new Error(`Weather API error: ${response.status}`);
+
+      const data: OpenWeatherResponse = await response.json();
+
+      const weather: WeatherData = {
+        temperature: Math.round(data.main.temp),
+        feelsLike: Math.round(data.main.feels_like),
+        condition: data.weather[0].main,
+        description: data.weather[0].description,
+        humidity: data.main.humidity,
+        windSpeed: Math.round(data.wind.speed),
+        icon: data.weather[0].icon,
+        city: data.name,
+        country: data.sys.country,
+      };
+
+      return NextResponse.json({
+        success: true,
+        weather,
+        isFallback: false,
+      });
+    } catch (fetchError) {
+      clearTimeout(timeoutId);
+
+      // If timeout or connection error, return fallback weather
+      console.log('Weather API timeout or connection error, using fallback weather');
+      return NextResponse.json({
+        success: true,
+        weather: getFallbackWeather(city || 'Miami'),
+        isFallback: true,
+      });
     }
-
-    const data: OpenWeatherResponse = await response.json();
-
-    const weather: WeatherData = {
-      temperature: Math.round(data.main.temp),
-      feelsLike: Math.round(data.main.feels_like),
-      condition: data.weather[0].main,
-      description: data.weather[0].description,
-      humidity: data.main.humidity,
-      windSpeed: Math.round(data.wind.speed),
-      icon: data.weather[0].icon,
-      city: data.name,
-      country: data.sys.country,
-    };
-
-    return NextResponse.json({
-      success: true,
-      weather,
-      isFallback: false,
-    });
   } catch (error) {
     console.error('Weather API error:', error);
-    return NextResponse.json(
-      { success: false, error: 'Failed to fetch weather' },
-      { status: 500 }
-    );
+    // Return fallback weather instead of failing completely
+    return NextResponse.json({
+      success: true,
+      weather: getFallbackWeather('Miami'),
+      isFallback: true,
+    });
   }
 }
 
