@@ -1034,7 +1034,7 @@ IMPORTANT: You MUST respond with valid JSON only. No markdown formatting, no cod
         const matchedClosetIds: string[] = []
         const newItemsSuggestions: any[] = []
 
-        // Helper to find matching closet item
+        // Helper to find matching closet item - STRICT matching only
         const findClosetMatch = (conceptItem: any) => {
           if (!conceptItem) return null
 
@@ -1053,23 +1053,20 @@ IMPORTANT: You MUST respond with valid JSON only. No markdown formatting, no cod
             return name.includes('bag') || name.includes('purse') || name.includes('clutch') || name.includes('tote')
           })
 
-          // Try to find color match first
+          // STRICT matching - only match if color AND description are very similar
           let match = categoryItems.find((i: ClosetItem) => {
             const itemColor = (i.color || '').toLowerCase()
             const itemName = (i.name || '').toLowerCase()
-            // Check if colors match (fuzzy matching)
-            if (color && (itemColor.includes(color) || color.includes(itemColor))) return true
-            // Check if description keywords match item name
-            if (desc && itemName.includes(desc.split(' ')[0])) return true
-            return false
+
+            // Must match BOTH color AND description keywords
+            const colorMatch = color && (itemColor.includes(color) || color.includes(itemColor))
+            const descMatch = desc && desc.split(' ').some(keyword => itemName.includes(keyword))
+
+            return colorMatch && descMatch
           })
 
-          // Fallback: just get first item in category if no match
-          if (!match && categoryItems.length > 0) {
-            match = categoryItems[0]
-          }
-
-          return match
+          // NO FALLBACK - if no strict match, return null (treat as new item)
+          return match || null
         }
 
         // Process each piece in the outfit concept
@@ -1119,26 +1116,10 @@ IMPORTANT: You MUST respond with valid JSON only. No markdown formatting, no cod
 
         // ENFORCE MIX & MATCH RULES: Must have at least 1 closet item AND 1 new item
         if (itemSource === 'mix') {
-          // If all items are from closet, suggest a DIFFERENT accessory/piece they DON'T own
+          // If all items are from closet, REJECT this outfit (mark as invalid)
           if (newItemsSuggestions.length === 0 && matchedClosetIds.length > 0) {
-            // Suggest complementary accessories or items they don't have
-            const suggestions = [
-              { category: 'bag', description: 'Crossbody bag', reasoning: 'Add versatility with a different bag style' },
-              { category: 'shoes', description: 'Strappy sandals', reasoning: 'Elevate the look with dressy footwear' },
-              { category: 'accessory', description: 'Statement sunglasses', reasoning: 'Complete the outfit with stylish accessories' },
-              { category: 'outerwear', description: 'Lightweight cardigan', reasoning: 'Layer for changing temperatures' },
-            ]
-
-            // Pick a suggestion that makes sense for the outfit
-            const newSuggestion = suggestions[0] // Default to bag
-            newItemsSuggestions.push({
-              description: newSuggestion.description,
-              category: newSuggestion.category,
-              color: 'neutral',
-              reasoning: newSuggestion.reasoning,
-              estimated_price: '$40-80'
-            })
-            console.log(`  ⚠️ Added complementary new item: ${newSuggestion.description} (you don't own this yet)`)
+            console.log(`  ❌ REJECTED: All items from closet, no new suggestions. Skipping this outfit.`)
+            return null // Mark this outfit as invalid
           }
 
           // If all items are new suggestions, force one to be from closet
@@ -1536,7 +1517,7 @@ IMPORTANT: You MUST respond with valid JSON only. No markdown formatting, no cod
       outfit._itemsWereSwapped = itemsWereSwapped
 
       return outfit
-    })
+    }).filter(Boolean) // Remove rejected outfits (nulls)
 
     // ALWAYS regenerate descriptions based on actual selected items to ensure accuracy
     // This prevents mismatches between photos and descriptions
