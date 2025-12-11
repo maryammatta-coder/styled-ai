@@ -23,7 +23,7 @@ interface OutfitOption {
 
 export default function GenerateOutfitPage() {
   const [selectedOccasion, setSelectedOccasion] = useState('')
-  const [itemSource, setItemSource] = useState<'closet' | 'mix' | 'new'>('closet')
+  const [itemSource, setItemSource] = useState<'closet' | 'new'>('closet')
   const [formalityLevel, setFormalityLevel] = useState(50)
   const [loading, setLoading] = useState(false)
   const [outfitOptions, setOutfitOptions] = useState<OutfitOption[]>([])
@@ -432,18 +432,6 @@ export default function GenerateOutfitPage() {
                 >
                   <div className="font-medium text-dark-taupe">My Closet Only</div>
                   <div className="text-sm text-warm-grey mt-1">Create outfits using only items you own</div>
-                </button>
-
-                <button
-                  onClick={() => setItemSource('mix')}
-                  className={`p-5 rounded-2xl border-2 transition-all text-left ${
-                    itemSource === 'mix'
-                      ? 'border-blush bg-blush/30'
-                      : 'border-taupe/30 hover:border-taupe bg-cream/50'
-                  }`}
-                >
-                  <div className="font-medium text-dark-taupe">Mix & Match</div>
-                  <div className="text-sm text-warm-grey mt-1">Combine your items with new suggestions</div>
                 </button>
 
                 <button

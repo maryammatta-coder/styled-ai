@@ -699,7 +699,15 @@ export async function POST(request: NextRequest) {
     }
 
     let closetItems: ClosetItem[] = []
-    if (itemSource === 'closet' || itemSource === 'mix') {
+    if (itemSource === 'closet') {
+      const { data: items } = await supabase
+        .from('closet_items')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('is_archived', false)
+      closetItems = items || []
+    } else if (itemSource === 'new') {
+      // For new items mode, still load closet to check what user already owns
       const { data: items } = await supabase
         .from('closet_items')
         .select('*')
@@ -776,8 +784,8 @@ export async function POST(request: NextRequest) {
     // Different prompt strategies based on item source
     let prompt = ''
 
-    if (itemSource === 'mix' || itemSource === 'new') {
-      // MIX & MATCH / NEW ITEMS: Create outfit concepts FIRST, then match to closet
+    if (itemSource === 'new') {
+      // NEW ITEMS: Create outfit concepts FIRST, then check against closet
       prompt = `You are a professional fashion stylist creating ${count} outfit IDEAS for a client.
 
 🎯 YOUR TASK: Design ${count} complete, cohesive outfit concepts based on the occasion and weather.
@@ -814,18 +822,10 @@ Create ${count} COMPLETE outfit concepts. For each piece, describe:
 - Dressy: structured bags, clutches, elegant shoulder bags, mini bags all work
 - Don't restrict yourself to only crossbody/tote - use variety
 
-${itemSource === 'mix' ? `
-🎨 MIX & MATCH MODE RULES:
-- Design the outfit you envision
-- We'll check the client's closet to see what they already own
-- Items they don't own will be suggested as new purchases
-- Focus on creating COHESIVE looks, not using maximum closet items
-` : `
 🛍️ NEW ITEMS ONLY MODE RULES:
 - Suggest ONLY items the client does NOT currently own
 - Create complete shopping lists for fresh outfit ideas
 - We'll verify these items aren't in their closet already
-`}
 
 ## RESPONSE FORMAT (JSON only)
 {
@@ -930,7 +930,7 @@ ${appropriate.bags.length > 0 ? formatItems(appropriate.bags) : '⚠️ NO BAGS 
 
 7. Only use IDs from the lists above
 
-8. ${itemSource === 'closet' ? 'new_items must be [] UNLESS suggesting a bag (bags are mandatory even for closet-only)' : itemSource === 'mix' ? '🎨 MIX & MATCH MODE - CRITICAL RULES:\n   - Use 2-3 closet items MAX (NOT all closet items!)\n   - Suggest 1-2 NEW ESSENTIAL items to COMPLETE the outfit (e.g. if closet has dress, suggest shoes. If closet has top, suggest bottom + shoes)\n   - ONLY suggest items the user NEEDS, not accessories they already have\n   - DO NOT suggest bags if closet already has a bag in the outfit\n   - DO NOT suggest cardigans/sweaters in hot weather\n   - DO NOT suggest hats/accessories unless specifically needed\n   - Each new item: description, category, color, reasoning, estimated_price\n   - Example: Closet has "white tank" → suggest "Tan linen shorts" + "Tan sandals" to complete' : itemSource === 'new' ? '🛍️ NEW ITEMS ONLY MODE: closet_item_ids should be [] (empty). ALL items must be suggested in new_items array. Create COMPLETE outfits with 3-5 new items (top, bottom OR dress, shoes, bag, accessories). Each new item MUST have: description, category, color, reasoning, estimated_price.' : ''}
+8. ${itemSource === 'closet' ? 'new_items must be [] UNLESS suggesting a bag (bags are mandatory even for closet-only)' : itemSource === 'new' ? '🛍️ NEW ITEMS ONLY MODE: closet_item_ids should be [] (empty). ALL items must be suggested in new_items array. Create COMPLETE outfits with 3-5 new items (top, bottom OR dress, shoes, bag, accessories). Each new item MUST have: description, category, color, reasoning, estimated_price.' : ''}
 
 9. ${temperature >= 70 ? 'NO long sleeves, NO sweaters, NO ribbed - too warm!' : temperature < 50 ? 'COLD WEATHER: MUST add outerwear if wearing a dress! For casual occasions, prefer pants over dresses in cold weather.' : ''}
 
@@ -1006,7 +1006,7 @@ CRITICAL RULES:
 
 7. ${temperature >= 70 ? 'WARM: No long sleeves, no sweaters, no ribbed!' : temperature < 50 ? 'COLD: Add outerwear! Prefer pants for casual.' : ''}
 
-8. ${itemSource === 'new' ? '🛍️ NEW ITEMS ONLY: Do NOT use closet_item_ids. ALL outfit pieces must be in new_items array (top/dress, bottom if needed, shoes, bag). Describe each item clearly with specific details (fabric, style, color). Include estimated_price for each.' : itemSource === 'mix' ? '🎨 MIX & MATCH: Pick 2-3 closet items MAX. Suggest ESSENTIAL missing pieces ONLY (if have top, suggest bottom+shoes. If have dress, suggest shoes). NO random accessories. NO bags if already using closet bag. NO cardigans in hot weather.' : 'Only use provided item IDs. Dress = complete outfit (no extra top/bottom).'}
+8. ${itemSource === 'new' ? '🛍️ NEW ITEMS ONLY: Do NOT use closet_item_ids. ALL outfit pieces must be in new_items array (top/dress, bottom if needed, shoes, bag). Describe each item clearly with specific details (fabric, style, color). Include estimated_price for each.' : 'Only use provided item IDs. Dress = complete outfit (no extra top/bottom).'}
 
 IMPORTANT: You MUST respond with valid JSON only. No markdown formatting, no code blocks, just pure JSON.`,
       messages: [
@@ -1026,15 +1026,14 @@ IMPORTANT: You MUST respond with valid JSON only. No markdown formatting, no cod
 
     // Validate and fix outfits
     const validatedOutfits = (outfitData.outfits || []).map((outfit: any) => {
-      // For MIX/NEW modes: AI returned outfit_concept, now match to closet
-      if ((itemSource === 'mix' || itemSource === 'new') && outfit.outfit_concept) {
-        console.log(`\n🎨 Processing ${itemSource} mode outfit concept:`, outfit.label)
+      // For NEW mode: AI returned outfit_concept, now check against closet
+      if (itemSource === 'new' && outfit.outfit_concept) {
+        console.log(`\n🛍️ Processing new items mode outfit concept:`, outfit.label)
 
         const concept = outfit.outfit_concept
-        const matchedClosetIds: string[] = []
         const newItemsSuggestions: any[] = []
 
-        // Helper to find matching closet item - STRICT matching only
+        // Helper to check if item exists in closet
         const findClosetMatch = (conceptItem: any) => {
           if (!conceptItem) return null
 
@@ -1053,7 +1052,7 @@ IMPORTANT: You MUST respond with valid JSON only. No markdown formatting, no cod
             return name.includes('bag') || name.includes('purse') || name.includes('clutch') || name.includes('tote')
           })
 
-          // STRICT matching - only match if color AND description are very similar
+          // Check if user already owns something similar
           let match = categoryItems.find((i: ClosetItem) => {
             const itemColor = (i.color || '').toLowerCase()
             const itemName = (i.name || '').toLowerCase()
@@ -1065,7 +1064,6 @@ IMPORTANT: You MUST respond with valid JSON only. No markdown formatting, no cod
             return colorMatch && descMatch
           })
 
-          // NO FALLBACK - if no strict match, return null (treat as new item)
           return match || null
         }
 
@@ -1076,85 +1074,26 @@ IMPORTANT: You MUST respond with valid JSON only. No markdown formatting, no cod
           const item = conceptItem as any
           const closetMatch = findClosetMatch(item)
 
-          if (itemSource === 'mix') {
-            // MIX MODE: Use closet item if found, otherwise suggest new
-            if (closetMatch && !matchedClosetIds.includes(closetMatch.id)) {
-              matchedClosetIds.push(closetMatch.id)
-              console.log(`  ✓ Found in closet: ${closetMatch.name} (${item.category})`)
-            } else {
-              newItemsSuggestions.push({
-                description: item.description,
-                category: item.category,
-                color: item.color,
-                reasoning: item.reasoning || `Completes the outfit for ${occasion}`,
-                estimated_price: '$40-80'
-              })
-              console.log(`  + Suggesting new: ${item.description} (${item.category})`)
-            }
-          } else if (itemSource === 'new') {
-            // NEW MODE: Only suggest if NOT in closet
-            if (closetMatch) {
-              console.log(`  ✗ Already own: ${closetMatch.name} - skipping this item`)
-            } else {
-              newItemsSuggestions.push({
-                description: item.description,
-                category: item.category,
-                color: item.color,
-                reasoning: item.reasoning || `Perfect for ${occasion}`,
-                estimated_price: '$40-80'
-              })
-              console.log(`  + Suggesting new: ${item.description} (${item.category})`)
-            }
+          // NEW MODE: Only suggest if NOT already in closet
+          if (closetMatch) {
+            console.log(`  ✗ Already own: ${closetMatch.name} - skipping this item`)
+          } else {
+            newItemsSuggestions.push({
+              description: item.description,
+              category: item.category,
+              color: item.color,
+              reasoning: item.reasoning || `Perfect for ${occasion}`,
+              estimated_price: '$40-80'
+            })
+            console.log(`  + Suggesting new: ${item.description} (${item.category})`)
           }
         }
 
-        // Update outfit with matched items
-        outfit.closet_item_ids = matchedClosetIds
+        // Update outfit with new items only (no closet items)
+        outfit.closet_item_ids = []
         outfit.new_items = newItemsSuggestions
 
-        console.log(`  Result: ${matchedClosetIds.length} closet items, ${newItemsSuggestions.length} new suggestions`)
-
-        // ENFORCE MIX & MATCH RULES: Must have at least 1 closet item AND 1 new item
-        if (itemSource === 'mix') {
-          // If all items are from closet, REJECT this outfit (mark as invalid)
-          if (newItemsSuggestions.length === 0 && matchedClosetIds.length > 0) {
-            console.log(`  ❌ REJECTED: All items from closet, no new suggestions. Skipping this outfit.`)
-            return null // Mark this outfit as invalid
-          }
-
-          // If all items are new suggestions, force one to be from closet
-          if (matchedClosetIds.length === 0 && newItemsSuggestions.length > 0) {
-            // Try to match at least ONE item from closet (preferably top or bottom)
-            const conceptItems = Object.values(concept).filter((item: any) => item && typeof item === 'object')
-
-            for (const conceptItem of conceptItems) {
-              const item = conceptItem as any
-              const closetMatch = findClosetMatch(item)
-
-              if (closetMatch && !matchedClosetIds.includes(closetMatch.id)) {
-                matchedClosetIds.push(closetMatch.id)
-                // Remove this item from new suggestions
-                newItemsSuggestions.splice(
-                  newItemsSuggestions.findIndex(s => s.category === item.category),
-                  1
-                )
-                console.log(`  ⚠️ Forced closet item: added ${closetMatch.name} from closet`)
-                break
-              }
-            }
-
-            // If still no closet items, add ANY appropriate item from closet
-            if (matchedClosetIds.length === 0 && closetItems.length > 0) {
-              const anyAppropriate = closetItems[0]
-              matchedClosetIds.push(anyAppropriate.id)
-              console.log(`  ⚠️ Forced any closet item: added ${anyAppropriate.name}`)
-            }
-          }
-
-          outfit.closet_item_ids = matchedClosetIds
-          outfit.new_items = newItemsSuggestions
-          console.log(`  Final result: ${matchedClosetIds.length} closet items, ${newItemsSuggestions.length} new suggestions\n`)
-        }
+        console.log(`  Result: ${newItemsSuggestions.length} new suggestions`)
       }
 
       // For closet-only mode, only keep bag suggestions in new_items
@@ -1517,7 +1456,7 @@ IMPORTANT: You MUST respond with valid JSON only. No markdown formatting, no cod
       outfit._itemsWereSwapped = itemsWereSwapped
 
       return outfit
-    }).filter(Boolean) // Remove rejected outfits (nulls)
+    })
 
     // ALWAYS regenerate descriptions based on actual selected items to ensure accuracy
     // This prevents mismatches between photos and descriptions
