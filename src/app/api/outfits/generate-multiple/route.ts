@@ -1119,24 +1119,26 @@ IMPORTANT: You MUST respond with valid JSON only. No markdown formatting, no cod
 
         // ENFORCE MIX & MATCH RULES: Must have at least 1 closet item AND 1 new item
         if (itemSource === 'mix') {
-          // If all items are from closet, force one to be a new suggestion
+          // If all items are from closet, suggest a DIFFERENT accessory/piece they DON'T own
           if (newItemsSuggestions.length === 0 && matchedClosetIds.length > 0) {
-            // Remove the least essential item (bag or accessory first, then shoes)
-            const lastItemId = matchedClosetIds[matchedClosetIds.length - 1]
-            const lastItem = closetItems.find((i: ClosetItem) => i.id === lastItemId)
+            // Suggest complementary accessories or items they don't have
+            const suggestions = [
+              { category: 'bag', description: 'Crossbody bag', reasoning: 'Add versatility with a different bag style' },
+              { category: 'shoes', description: 'Strappy sandals', reasoning: 'Elevate the look with dressy footwear' },
+              { category: 'accessory', description: 'Statement sunglasses', reasoning: 'Complete the outfit with stylish accessories' },
+              { category: 'outerwear', description: 'Lightweight cardigan', reasoning: 'Layer for changing temperatures' },
+            ]
 
-            if (lastItem) {
-              matchedClosetIds.pop()
-              const category = categorizeItem(lastItem)
-              newItemsSuggestions.push({
-                description: `${lastItem.color || 'Stylish'} ${category}`,
-                category: category,
-                color: lastItem.color || 'neutral',
-                reasoning: `Complete your ${occasion} look with a new ${category}`,
-                estimated_price: '$40-80'
-              })
-              console.log(`  ⚠️ Forced new item: removed ${lastItem.name} from closet, suggesting new ${category}`)
-            }
+            // Pick a suggestion that makes sense for the outfit
+            const newSuggestion = suggestions[0] // Default to bag
+            newItemsSuggestions.push({
+              description: newSuggestion.description,
+              category: newSuggestion.category,
+              color: 'neutral',
+              reasoning: newSuggestion.reasoning,
+              estimated_price: '$40-80'
+            })
+            console.log(`  ⚠️ Added complementary new item: ${newSuggestion.description} (you don't own this yet)`)
           }
 
           // If all items are new suggestions, force one to be from closet
